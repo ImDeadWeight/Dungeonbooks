@@ -55,6 +55,8 @@ export const PAGE_TYPES: { type: PageType; label: string }[] = [
 export interface Page {
   id: Id;
   title: string;
+  /** Other names the page goes by ("Thal", "the Imperium"); mentions of these link to it too. Absent when there are none. */
+  aliases?: string[];
   folderId: Id | null;
   boxes: TextBox[];
   /** Absent for plain notes. */
@@ -184,9 +186,9 @@ export interface TreeFilter {
 }
 
 /**
- * Narrows the sidebar tree to a search: folders and pages whose names contain
- * the text (ignoring case), the folders above them, and everything inside a
- * matching folder. Null when the search is blank.
+ * Narrows the sidebar tree to a search: folders and pages whose names (or a
+ * page's aliases) contain the text (ignoring case), the folders above them,
+ * and everything inside a matching folder. Null when the search is blank.
  */
 export function filterTree(folders: Folder[], pages: Page[], query: string): TreeFilter | null {
   const q = query.trim().toLowerCase();
@@ -201,9 +203,9 @@ export function filterTree(folders: Folder[], pages: Page[], query: string): Tre
   };
   const visible = new Set<Id>();
   const opened = new Set<Id>();
-  const consider = (id: Id, parentId: Id | null, name: string) => {
+  const consider = (id: Id, parentId: Id | null, ...names: string[]) => {
     const chain = above(parentId);
-    if (name.toLowerCase().includes(q)) {
+    if (names.some((name) => name.toLowerCase().includes(q))) {
       visible.add(id);
       for (const f of chain) {
         visible.add(f);
@@ -214,8 +216,17 @@ export function filterTree(folders: Folder[], pages: Page[], query: string): Tre
     }
   };
   for (const f of folders) consider(f.id, f.parentId, f.name);
-  for (const p of pages) consider(p.id, p.folderId, p.title);
+  for (const p of pages) consider(p.id, p.folderId, p.title, ...(p.aliases ?? []));
   return { visible, opened };
+}
+
+/** Aliases as typed in a comma-separated list: trimmed, blanks and repeats (ignoring case) dropped. */
+export function parseAliases(text: string): string[] {
+  const seen = new Set<string>();
+  return text
+    .split(',')
+    .map((a) => a.trim().replace(/\s+/g, ' '))
+    .filter((a) => a && !seen.has(a.toLowerCase()) && seen.add(a.toLowerCase()));
 }
 
 /** Inline items that count as content although they hold no text (an encounter link chip). */

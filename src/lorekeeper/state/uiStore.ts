@@ -8,6 +8,9 @@ import { create } from 'zustand';
 import type { Id } from '../domain/ids';
 import { isPhoneLayout } from '../../platform';
 
+/** Recently opened pages remembered. */
+const MAX_RECENT = 20;
+
 /** The small panel that shows a linked page without leaving the current one. */
 export interface Peek {
   pageId: Id;
@@ -28,6 +31,8 @@ export interface Confirm {
 /** UI state plus its actions. */
 interface UiState {
   selectedPageId: Id | null;
+  /** Pages opened lately, most recent first (link suggestions rank them higher). */
+  recentPageIds: Id[];
   /** Folders the user has collapsed; expanded by default. */
   collapsedFolders: Record<Id, boolean>;
   sidebarCollapsed: boolean;
@@ -71,6 +76,7 @@ interface UiState {
 
 export const useUi = create<UiState>((set) => ({
   selectedPageId: null,
+  recentPageIds: [],
   collapsedFolders: {},
   sidebarCollapsed: false,
   statBlockOpen: false,
@@ -83,7 +89,13 @@ export const useUi = create<UiState>((set) => ({
   pageTypeFolderId: null,
   errors: [],
   // On a phone the page replaces the page list, so opening one folds the list away.
-  selectPage: (id) => set({ selectedPageId: id, peek: null, ...(id && isPhoneLayout() ? { sidebarCollapsed: true } : {}) }),
+  selectPage: (id) =>
+    set((s) => ({
+      selectedPageId: id,
+      peek: null,
+      recentPageIds: id ? [id, ...s.recentPageIds.filter((r) => r !== id)].slice(0, MAX_RECENT) : s.recentPageIds,
+      ...(id && isPhoneLayout() ? { sidebarCollapsed: true } : {}),
+    })),
   toggleFolder: (id) => set((s) => ({ collapsedFolders: { ...s.collapsedFolders, [id]: !s.collapsedFolders[id] } })),
   expandFolder: (id) => set((s) => ({ collapsedFolders: { ...s.collapsedFolders, [id]: false } })),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
@@ -100,5 +112,5 @@ export const useUi = create<UiState>((set) => ({
   notifyError: (text) => set((s) => ({ errors: [...s.errors, text] })),
   dismissError: (index) => set((s) => ({ errors: s.errors.filter((_, i) => i !== index) })),
   resetForNotebook: (collapsedFolders) =>
-    set({ selectedPageId: null, collapsedFolders, focusBoxId: null, focusTitlePageId: null, peek: null }),
+    set({ selectedPageId: null, recentPageIds: [], collapsedFolders, focusBoxId: null, focusTitlePageId: null, peek: null }),
 }));

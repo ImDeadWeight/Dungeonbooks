@@ -14,6 +14,8 @@ import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { EncounterLink } from '../editor/encounterLink';
 import { forgetEditor, rememberEditor } from '../editor/lastEditor';
+import { LinkAutocomplete } from '../editor/linkAutocomplete';
+import { LinkPicker } from '../editor/LinkPicker';
 import { LinkSuggestions, refreshLinkSuggestions } from '../editor/linkSuggestions';
 import { linkedPageId, PageLink, unlinkAt } from '../editor/pageLink';
 
@@ -26,9 +28,9 @@ interface Props {
   box: TextBox;
 }
 
-/** Every page id + title, as one string; changes whenever a page is added, renamed or deleted. */
+/** Every page id, title and alias, as one string; changes whenever a page is added, renamed, given aliases or deleted. */
 const selectTitlesKey = (s: ReturnType<typeof useNotebook.getState>) =>
-  s.pages.map((p) => `${p.id}\u0000${p.title}`).join('\u0001');
+  s.pages.map((p) => [p.id, p.title, ...(p.aliases ?? [])].join('\u0000')).join('\u0001');
 
 /**
  * Follows pointer moves until release, calling onMove with the distance from
@@ -54,7 +56,7 @@ export function TextBoxView({ pageId, box }: Props) {
 
   const editor = useEditor(
     {
-      extensions: [StarterKit, PageLink, EncounterLink, LinkSuggestions.configure({ pageId })],
+      extensions: [StarterKit, PageLink, EncounterLink, LinkSuggestions.configure({ pageId }), LinkAutocomplete.configure({ pageId })],
       content: box.content,
       onUpdate: ({ editor }) => useNotebook.getState().setBoxContent(pageId, box.id, editor.getJSON()),
       // Remembered so page actions (Link encounter) insert where the caret was.
@@ -133,6 +135,7 @@ export function TextBoxView({ pageId, box }: Props) {
         </button>
       </div>
       <EditorContent editor={editor} />
+      {editor && <LinkPicker editor={editor} pageId={pageId} />}
       <div className="text-box-resize" onPointerDown={startResize} title="Drag to resize" />
     </div>
   );

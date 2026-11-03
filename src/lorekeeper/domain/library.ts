@@ -4,7 +4,7 @@
  */
 import { readSharedStatBlock } from 'campaign-link';
 import type { Id } from './ids';
-import type { Folder, Notebook, Page, PageInfo, TextBox } from './notebook';
+import { parseAliases, type Folder, type Notebook, type Page, type PageInfo, type TextBox } from './notebook';
 
 /** Marks an exported file as a Lorekeeper notebook. */
 const EXPORT_FORMAT = 'lorekeeper-notebook';
@@ -95,9 +95,18 @@ function readNotebook(raw: unknown): Notebook {
     const folderId = isString(p.folderId) && folderIds.has(p.folderId) ? p.folderId : null;
     const boxes = Array.isArray(p.boxes) ? p.boxes.map((b, j) => readBox(b, `page "${title}", box ${j + 1}`)) : [];
     const info = readInfo(p.info);
+    const aliases = Array.isArray(p.aliases) ? parseAliases(p.aliases.filter(isString).join(',')) : [];
     // A stat block from a newer version, or a damaged one, is left out rather than losing the notebook.
     const statBlock = readSharedStatBlock(p.statBlock);
-    return { id: p.id, title, folderId, boxes, ...(info ? { info } : {}), ...(statBlock ? { statBlock } : {}) };
+    return {
+      id: p.id,
+      title,
+      ...(aliases.length ? { aliases } : {}),
+      folderId,
+      boxes,
+      ...(info ? { info } : {}),
+      ...(statBlock ? { statBlock } : {}),
+    };
   });
   if (new Set(pages.map((p) => p.id)).size !== pages.length) throw new Error('two pages share an id');
   repairPlaces(pages);

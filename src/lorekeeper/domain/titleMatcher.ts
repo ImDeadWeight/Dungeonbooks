@@ -1,7 +1,8 @@
 /**
  * @file Finds mentions of page titles in plain text, for link suggestions.
- * Matching ignores case and extra whitespace, needs whole words, and prefers
- * the longest title when titles overlap ("Thalamar Imperium" beats "Thalamar").
+ * Matching ignores case and extra whitespace, needs whole words (a plural
+ * "s" or "es" still counts: "Veilstrands"), and prefers the longest title
+ * when titles overlap ("Thalamar Imperium" beats "Thalamar").
  */
 import type { Id } from './ids';
 
@@ -54,15 +55,15 @@ export function createTitleMatcher(candidates: LinkCandidate[]): TitleMatcher {
 
   // Longest first, so at any position the regex tries the longest title before its prefixes.
   const keys = [...byKey.keys()].sort((a, b) => b.length - a.length);
-  // Whole words only: no letter or digit directly before or after the title.
-  const source = `(?<![\\p{L}\\p{N}])(?:${keys.map(titlePattern).join('|')})(?![\\p{L}\\p{N}])`;
+  // Whole words only: no letter or digit directly before or after the title (or its plural ending).
+  const source = `(?<![\\p{L}\\p{N}])(${keys.map(titlePattern).join('|')})(?:e?s)?(?![\\p{L}\\p{N}])`;
   const regex = new RegExp(source, 'giu');
 
   return {
     find(text) {
       const matches: TitleMatch[] = [];
       for (const m of text.matchAll(regex)) {
-        const pageId = byKey.get(normalizeTitle(m[0]));
+        const pageId = byKey.get(normalizeTitle(m[1]));
         if (pageId) matches.push({ from: m.index!, to: m.index! + m[0].length, pageId });
       }
       return matches;

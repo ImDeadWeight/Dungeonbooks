@@ -15,6 +15,14 @@ encounter or character (and its campaign, if another one is open).
 
 The character library and custom conditions are shared by every campaign.
 
+**Linking notes.** Mentions of another page's title or aliases (the page's **Also called** field, comma-separated)
+get a dotted underline and a link button; plurals count ("Veilstrands"). While typing, when the words just typed start
+the name of one page, the rest of the word shows in grey: **Tab** finishes the word and links what you wrote to that
+page (Escape hides it; on a phone, tap the chip above the text). Typing `[[` or pressing **Ctrl+Space** opens a list
+of pages that fit, typos forgiven and recently opened or same-folder pages first; Enter or Tab links, and the last
+row creates a page by that name. Ctrl+Space with text selected links the selection as it is. A link keeps its own
+wording, and follows the page through renames.
+
 Built with Tauri 2 + React + TypeScript, from the Encounters and Lorekeeper code; the shared game formats and catalogue
 formats still come from the [campaign-link](https://github.com/ImDeadWeight/campaign-link) package.
 

@@ -29,10 +29,17 @@ describe('title matching', () => {
   });
 
   it('needs whole words', () => {
-    expect(found('Veilstrands and preVeilstrand')).toEqual([]);
+    expect(found('Veilstrandish and preVeilstrand')).toEqual([]);
     expect(found("Veilstrand's coast, (Veilstrand).")).toEqual([
       ['Veilstrand', 'veil'],
       ['Veilstrand', 'veil'],
+    ]);
+  });
+
+  it('counts plurals', () => {
+    expect(found('two Veilstrands, many Thalamares')).toEqual([
+      ['Veilstrands', 'veil'],
+      ['Thalamares', 'thalamar'],
     ]);
   });
 

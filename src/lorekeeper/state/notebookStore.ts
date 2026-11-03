@@ -52,6 +52,8 @@ interface NotebookState extends Notebook {
   deleteFolder(id: Id): void;
   addPage(folderId: Id | null, title?: string): Id;
   renamePage(id: Id, title: string): void;
+  /** Sets a page's other names (none removes them). */
+  setPageAliases(id: Id, aliases: string[]): void;
   movePage(id: Id, folderId: Id | null): void;
   /** Sets what pages describe (undefined makes them plain notes). */
   setPageInfo(ids: Id[], info: (current: PageInfo | undefined) => PageInfo | undefined): void;
@@ -115,6 +117,16 @@ export const useNotebook = create<NotebookState>((set, get) => {
 
     renamePage(id, title) {
       set((s) => ({ pages: s.pages.map((p) => (p.id === id ? { ...p, title } : p)) }));
+    },
+
+    setPageAliases(id, aliases) {
+      set((s) => ({
+        pages: s.pages.map((p) => {
+          if (p.id !== id) return p;
+          const { aliases: _old, ...rest } = p;
+          return aliases.length ? { ...rest, aliases } : rest;
+        }),
+      }));
     },
 
     movePage(id, folderId) {

@@ -22,12 +22,17 @@ const LINK_ICON =
 /** Matcher for the last set of titles seen, shared by every box (rebuilt only when titles change). */
 let cached: { key: string; matcher: TitleMatcher } | null = null;
 
-/** A matcher for every page except the one being edited (a page never suggests linking to itself). */
+/**
+ * A matcher for the titles and aliases of every page except the one being
+ * edited (a page never suggests linking to itself). Titles come first, so a
+ * title wins over another page's alias.
+ */
 function matcherFor(currentPageId: Id): TitleMatcher {
-  const candidates = useNotebook
-    .getState()
-    .pages.filter((p) => p.id !== currentPageId)
-    .map((p) => ({ pageId: p.id, title: p.title }));
+  const others = useNotebook.getState().pages.filter((p) => p.id !== currentPageId);
+  const candidates = [
+    ...others.map((p) => ({ pageId: p.id, title: p.title })),
+    ...others.flatMap((p) => (p.aliases ?? []).map((title) => ({ pageId: p.id, title }))),
+  ];
   const key = candidates.map((c) => `${c.pageId}\u0000${c.title}`).join('\u0001');
   if (cached?.key !== key) cached = { key, matcher: createTitleMatcher(candidates) };
   return cached.matcher;
