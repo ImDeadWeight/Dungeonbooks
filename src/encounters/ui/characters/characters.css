@@ -1,0 +1,139 @@
+/* @file Character editor, tag picker layout, filter bar, tag filter, and character lists. */
+
+.character-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.character-basics {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.field.grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+.tag-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--text);
+}
+
+.editor-actions {
+  position: sticky;
+  bottom: -16px;
+  background: var(--panel);
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+
+.filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-bar .row input {
+  flex: 1;
+}
+
+.tag-filter-button {
+  flex-shrink: 0;
+  background: var(--bg);
+}
+
+.tag-filter-button.on,
+.tag-filter-button[aria-expanded='true'] {
+  border-color: var(--accent);
+}
+
+.tag-filter-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--accent);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+}
+
+/* The search box stays put while the tag list scrolls. */
+.tag-filter-popup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+  width: 280px;
+}
+
+.tag-filter-popup .picker-search {
+  max-width: none;
+}
+
+.tag-filter-list {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.tag-filter-popup .picker-option {
+  min-width: 0;
+}
+
+.tag-filter-clear {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+
+.tag-filter-clear:hover {
+  color: var(--text);
+}
+
+.character-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.character-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  background: var(--panel-raised);
+}
+
+.character-item .name {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* Name suggestions from Lorekeeper, under the Name field. */
+.lore-suggestions-title {
+  padding: 4px 10px 2px;
+  font-size: 12px;
+}
+
+.lore-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Which Lorekeeper page the character came from. */
+.lore-source {
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-raised);
+}

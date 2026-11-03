@@ -1,0 +1,49 @@
+/* @file Condition editor fields and the Conditions window (built-in and custom lists). */
+
+.condition-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.condition-fields textarea {
+  resize: vertical;
+}
+
+.condition-fields .field-error {
+  color: var(--damage-hover);
+  font-size: 12px;
+}
+
+.condition-library {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.condition-library h3 {
+  margin: 16px 0 6px;
+}
+
+.condition-library section > h3:first-child {
+  margin-top: 0;
+}
+
+.condition-entry {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.condition-entry + .condition-entry {
+  margin-top: 6px;
+}
+
+.condition-entry p {
+  margin: 0;
+  font-size: 13px;
+}

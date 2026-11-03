@@ -1,0 +1,99 @@
+/*
+ * @file Phone layout (narrow screens; keep the width in step with
+ * PHONE_MAX_WIDTH in platform.ts): one panel at a time. The page list fills
+ * the screen until a page is opened; then the page does, with the folded
+ * list's strip at the left to bring it back. Desktop windows are never this
+ * narrow. Loaded after the component styles.
+ */
+@media (max-width: 700px) {
+  .workspace.sidebar-open {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace.sidebar-open .main-panel {
+    display: none;
+  }
+
+  .sidebar:not(.collapsed) {
+    width: auto;
+  }
+
+  /* The page list fills the screen, so there's nothing to resize. */
+  .sidebar .sidebar-resizer {
+    display: none;
+  }
+
+  /* Room for the notebook's name. */
+  .top-bar .brand {
+    display: none;
+  }
+
+  .notebook-current {
+    max-width: calc(100vw - 80px);
+  }
+
+  /* Import shrinks to its icon. */
+  .top-bar .top-bar-label {
+    display: none;
+  }
+
+  .notebook-dropdown {
+    width: min(340px, calc(100vw - 24px));
+  }
+
+  .page-header {
+    padding: 10px 10px 8px;
+  }
+
+  .page-title {
+    font-size: 20px;
+  }
+}
+
+/* Pages as one column: boxes follow each other in reading order, full width, instead of sitting where the desktop put them. */
+@media (max-width: 700px) {
+  .page-canvas.flow {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 100%;
+    padding: 6px 4px 120px;
+  }
+
+  .page-canvas.flow .text-box {
+    position: static;
+    width: auto !important;
+  }
+
+  /* Moving and resizing make no sense in a column; the bar keeps its delete button. */
+  .page-canvas.flow .text-box-resize,
+  .page-canvas.flow .text-box-grip svg:first-child {
+    display: none;
+  }
+
+  .page-canvas.flow .text-box-grip {
+    cursor: default;
+  }
+
+  .page-canvas.flow .canvas-hint {
+    position: static;
+    padding: 16px 12px;
+  }
+}
+
+/* The stat block panel covers the page; its × brings the page back. */
+@media (max-width: 700px) {
+  .page-view {
+    position: relative;
+  }
+
+  .statblock-panel,
+  .statblock-panel.editing {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    width: auto;
+    max-width: none;
+    border-left: none;
+  }
+}

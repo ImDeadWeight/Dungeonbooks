@@ -1,0 +1,245 @@
+/* @file Sidebar tree: rows, selection, drag/drop highlights, L-shaped guide lines. */
+
+.sidebar {
+  position: relative;
+  /* Set by the resize handle. */
+  width: var(--sidebar-width, 280px);
+}
+
+/* The resize handle along the right edge: only with a mouse or trackpad (phone.css hides it on phones). */
+.sidebar-resizer {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 6px;
+  z-index: 3;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+@media (any-pointer: fine) {
+  .sidebar-resizer {
+    display: block;
+  }
+}
+
+/* A thin line shows where the edge is while pointing at it or dragging it. */
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 2px;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.resizing-sidebar .sidebar-resizer::after {
+  background: var(--accent);
+}
+
+.sidebar-resizer:focus-visible {
+  outline: none;
+}
+
+/* While dragging: the resize cursor everywhere, and no text selection. */
+.resizing-sidebar {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.sidebar.collapsed {
+  width: 44px;
+  align-items: center;
+  padding-top: 8px;
+}
+
+/*
+ * Guide lines: each child node draws a vertical segment at its parent's
+ * chevron (--guide-x, set by TreeChildren) and a short horizontal tick to
+ * itself. The last child's segment stops at its row, forming an L.
+ */
+.tree-node {
+  position: relative;
+  --row-mid: 16px;
+}
+
+.tree-children > .tree-node::before,
+.tree-children > .tree-node::after {
+  content: '';
+  position: absolute;
+  left: var(--guide-x);
+  /* Always above row backgrounds (selected/hover/drop highlight), never catching clicks. */
+  z-index: 1;
+  pointer-events: none;
+  border-color: var(--tree-line);
+  border-style: solid;
+  border-width: 0;
+}
+
+.tree-children > .tree-node::before {
+  top: 0;
+  bottom: 0;
+  border-left-width: 1px;
+}
+
+.tree-children > .tree-node:last-child::before {
+  bottom: auto;
+  height: var(--row-mid);
+}
+
+.tree-children > .tree-node::after {
+  top: var(--row-mid);
+  width: 8px;
+  border-top-width: 1px;
+}
+
+/* Pages have no chevron, so the tick reaches further toward the name. */
+.tree-children > .tree-node.leaf::after {
+  width: 24px;
+}
+
+.tree-row {
+  /* The row's background, also painted behind its action buttons. */
+  --row-bg: var(--panel);
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  /* A swipe scrolls the list; picking a row up by touch takes a press and hold (see Sidebar.tsx). */
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.tree-row:hover {
+  --row-bg: var(--panel-hover);
+  background: var(--row-bg);
+}
+
+.tree-row.selected {
+  --row-bg: var(--accent-soft);
+  background: var(--row-bg);
+  border-left-color: var(--accent);
+}
+
+.tree-row.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* A folder dropped here goes just above / just below this row. */
+.tree-row.drop-before {
+  box-shadow: inset 0 2px 0 var(--accent);
+}
+
+.tree-row.drop-after {
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.tree-row.dragging {
+  opacity: 0.5;
+}
+
+.tree-indent {
+  width: 26px;
+  flex-shrink: 0;
+}
+
+.tree-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tree-row input {
+  flex: 1;
+  padding: 2px 4px;
+}
+
+/* Float over the end of the row, so names use the full width while the buttons are hidden. */
+.tree-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px 0 16px;
+  background: linear-gradient(to right, transparent, var(--row-bg) 14px);
+  visibility: hidden;
+}
+
+.tree-row:hover .tree-actions,
+.tree-row.selected .tree-actions {
+  visibility: visible;
+}
+
+.tree-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* Room below the last row to drop things at the top level. */
+.tree-body {
+  padding-bottom: 40px;
+}
+
+.tree-body.drop-target {
+  outline: 2px dashed var(--accent);
+  outline-offset: -2px;
+}
+
+/* Set-page-type dialog. */
+.set-type-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.set-type-form p {
+  margin: 0;
+}
+
+/* Search box under the header; the magnifier and clear button sit inside the field. */
+.sidebar-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-search input {
+  flex: 1;
+  padding-left: 28px;
+  padding-right: 28px;
+}
+
+.sidebar-search-icon {
+  position: absolute;
+  left: 21px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.sidebar-search button.icon {
+  position: absolute;
+  right: 15px;
+  display: inline-flex;
+}
+
+/* The part of a name that matches the search. */
+.tree-label mark {
+  background: rgba(224, 123, 31, 0.4);
+  color: inherit;
+  border-radius: 2px;
+}

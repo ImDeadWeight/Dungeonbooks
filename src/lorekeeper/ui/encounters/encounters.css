@@ -1,0 +1,101 @@
+/* @file Things from the linked Encounters campaign: encounter chips in text, the Link encounter picker, a Character page's encounter list. */
+
+/* "In combat · round 3" / "Not in combat". */
+.encounter-state {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.encounter-state.live {
+  color: var(--resolve);
+  font-weight: 600;
+}
+
+/* A chip in page text. */
+.encounter-chip {
+  display: inline-flex;
+  vertical-align: baseline;
+}
+
+.encounter-chip button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  font-size: 0.92em;
+  line-height: 1.6;
+  border-radius: 999px;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.encounter-chip.missing button {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.encounter-chip .encounter-state {
+  font-size: 11px;
+}
+
+/* Selected (e.g. with the keyboard, before deleting it). */
+.ProseMirror-selectednode.encounter-chip button,
+.encounter-chip.ProseMirror-selectednode button {
+  outline: 2px solid var(--accent);
+}
+
+/* Page header button. */
+.link-encounter-button {
+  padding: 3px 10px;
+}
+
+/* Picker. */
+.link-encounter-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-encounter-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 55vh;
+  overflow: auto;
+}
+
+.link-encounter-option {
+  justify-content: flex-start;
+  text-align: left;
+}
+
+/* A Character page's encounters, under its title. */
+.character-encounters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px 0;
+}
+
+.character-encounters-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.encounter-entry {
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.encounter-entry.live {
+  border-color: var(--resolve);
+}
+
+.encounter-hurt {
+  font-size: 12px;
+  color: #ff8a8a;
+}

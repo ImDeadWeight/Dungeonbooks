@@ -1,0 +1,23 @@
+[package]
+name = "dungeon-books"
+version = "0.1.0"
+description = "Encounters and Lorekeeper in one app: encounter builder, initiative tracker and hyperlinked campaign notes for tabletop RPGs"
+edition = "2021"
+
+[lib]
+name = "dungeon_books_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-fs = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Desktop only: Android and iOS keep a single copy of an app themselves.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"

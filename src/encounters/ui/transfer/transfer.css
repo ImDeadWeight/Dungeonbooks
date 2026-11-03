@@ -1,0 +1,76 @@
+/* @file Import preview: summary table, conflict rows, segmented Keep mine / Use imported / Keep both buttons. */
+
+.import-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.import-preview p {
+  margin: 0;
+}
+
+.import-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.import-section h3 {
+  font-size: 15px;
+}
+
+.import-summary {
+  border-collapse: collapse;
+  width: max-content;
+}
+
+.import-summary th,
+.import-summary td {
+  padding: 4px 14px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.import-summary tbody th {
+  text-align: left;
+}
+
+.import-summary thead th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.conflict-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  background: var(--panel-raised);
+}
+
+.segmented {
+  display: inline-flex;
+}
+
+.segmented button {
+  border-radius: 0;
+  margin-left: -1px;
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.segmented button:first-child {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.segmented button:last-child {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.segmented button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}

@@ -1,0 +1,153 @@
+/* @file Shared controls: buttons (primary, heal, damage, resolve, icon), inputs, labelled fields, rows, chips. */
+
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+button:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+button.primary:hover:not(:disabled) {
+  background: #5590ff;
+}
+
+button.heal {
+  background: var(--heal);
+  border-color: var(--heal);
+}
+
+button.heal:hover:not(:disabled) {
+  background: var(--heal-hover);
+}
+
+button.damage {
+  background: var(--damage);
+  border-color: var(--damage);
+}
+
+button.damage:hover:not(:disabled) {
+  background: var(--damage-hover);
+}
+
+button.resolve {
+  background: var(--resolve);
+  border-color: var(--resolve);
+}
+
+button.resolve:hover:not(:disabled) {
+  background: var(--resolve-hover);
+}
+
+button.icon {
+  background: transparent;
+  border-color: transparent;
+  padding: 4px;
+}
+
+button.icon:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+button.big {
+  font-size: 16px;
+  padding: 8px 18px;
+  font-weight: 600;
+}
+
+input,
+select,
+textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  min-width: 0;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+input[type='number'] {
+  width: 72px;
+}
+
+input[type='checkbox'] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+label.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.row.wrap {
+  flex-wrap: wrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 12px;
+}
+
+.chip.locked {
+  background: var(--panel-hover);
+  color: var(--text-muted);
+}
+
+.chip button.icon {
+  padding: 0;
+}

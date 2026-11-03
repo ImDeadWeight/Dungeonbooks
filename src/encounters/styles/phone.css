@@ -1,0 +1,78 @@
+/*
+ * @file Phone layout (narrow screens; keep the width in step with
+ * PHONE_MAX_WIDTH in platform.ts): one panel at a time. The sidebar fills
+ * the screen until an encounter is opened; then the initiative order does,
+ * with the folded sidebar's strip at the left. Tapping a combatant shows its
+ * panel instead, with a Back button. Desktop windows are never this narrow.
+ * Loaded after the component styles.
+ */
+
+/* Back button for the combatant panel: phones only. */
+.phone-only {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .phone-only {
+    display: inline-flex;
+  }
+
+  /* .app: layout.css loads after this file and sets the three desktop columns at the same strength. */
+  .app .workspace {
+    grid-template-columns: auto 1fr;
+  }
+
+  .workspace.sidebar-open {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace.sidebar-open > :not(.sidebar) {
+    display: none;
+  }
+
+  .sidebar:not(.collapsed) {
+    width: auto;
+  }
+
+  /* The sidebar fills the screen, so there's nothing to resize. */
+  .sidebar .sidebar-resizer {
+    display: none;
+  }
+
+  /* Initiative order, or (after tapping a combatant) its panel. */
+  .workspace:not(.details-open) .combatant-panel,
+  .workspace.details-open .main-panel {
+    display: none;
+  }
+
+  /* Top bar: icons only, so every button fits. */
+  .top-bar .brand {
+    display: none;
+  }
+
+  .top-bar > button {
+    font-size: 0;
+    gap: 0;
+    padding: 6px 10px;
+  }
+}
+
+/* Character library: search, filters and New wrap onto more lines instead of running off the screen. */
+@media (max-width: 700px) {
+  .character-editor > .row {
+    flex-wrap: wrap;
+  }
+
+  .character-editor > .row > .spacer {
+    min-width: 0;
+  }
+
+  .filter-bar .row {
+    flex-wrap: wrap;
+  }
+
+  .filter-bar .row input {
+    min-width: 0;
+    flex: 1 1 160px;
+  }
+}

@@ -1,0 +1,36 @@
+/*
+ * @file Touch mode: the same screens adapted for fingers (Android, touch
+ * laptops without a mouse). Keyed on the input device, not the platform, so
+ * a mouse always gets the desktop look. Loaded after the component styles.
+ */
+
+/* No hover: controls that only appear on hover show for the row last tapped (tapping a row focuses it). */
+@media (hover: none) {
+  .tree-row:focus-within .tree-actions {
+    visibility: visible;
+  }
+
+  .picker-delete {
+    opacity: 1;
+  }
+}
+
+/* Fingers: tap targets of at least about 44px. */
+@media (pointer: coarse) {
+  button.icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  input,
+  select {
+    min-height: 40px;
+  }
+
+  .tree-row,
+  .combatant-row,
+  .picker-option,
+  .lore-suggestion {
+    min-height: 44px;
+  }
+}

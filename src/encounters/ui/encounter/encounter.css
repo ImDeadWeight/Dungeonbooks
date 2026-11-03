@@ -1,0 +1,230 @@
+/* @file Main panel: encounter header, turn blockers, initiative rows, HP colours, dying pips and values, fallen sections. */
+
+.encounter-header {
+  flex-wrap: wrap;
+}
+
+.combat-state {
+  display: inline-flex;
+}
+
+.round {
+  font-size: 13px;
+}
+
+.turn-blockers {
+  padding: 6px 12px;
+  background: rgba(224, 123, 31, 0.15);
+  border-bottom: 1px solid var(--resolve);
+  color: #ffc58f;
+  font-size: 13px;
+}
+
+.initiative-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.combatant-row {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.combatant-row:hover {
+  background: var(--panel-raised);
+}
+
+.combatant-row.selected {
+  border-color: var(--accent);
+}
+
+.combatant-row.current {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.combatant-row.dying {
+  border-left-color: var(--dying);
+}
+
+.combatant-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Initiative badge: a solid tile once rolled, a faint dashed placeholder before. */
+.initiative {
+  flex-shrink: 0;
+  min-width: 52px;
+  padding: 3px 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #ffffff;
+  line-height: 1;
+}
+
+.initiative-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.initiative-value {
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.initiative.unset {
+  border-style: dashed;
+  border-color: var(--border);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.combatant-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.token {
+  font-size: 12px;
+}
+
+.combatant-conditions {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Bordered so chips stay visible on the highlighted current-turn row. */
+.combatant-conditions .chip {
+  border: 1px solid var(--border);
+  background: var(--panel-raised);
+}
+
+.combatant-conditions .chip.unresolved {
+  border-color: var(--resolve);
+}
+
+.chip.unresolved {
+  background: var(--resolve);
+}
+
+.hp {
+  font-weight: 600;
+  min-width: 64px;
+  text-align: right;
+}
+
+.hp.healthy {
+  color: #7fe09b;
+}
+
+.hp.bloodied {
+  color: #ffb36b;
+}
+
+.hp.out {
+  color: #ff7a7a;
+}
+
+.temp-hp {
+  color: #8fc1ff;
+}
+
+.status-badge.dying {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #f0a8c8;
+}
+
+.death-tally {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+}
+
+.pip.success {
+  color: var(--heal-hover);
+}
+
+.pip.failure {
+  color: var(--damage-hover);
+}
+
+.pip.filled {
+  background: currentColor;
+}
+
+.pip-gap {
+  width: 6px;
+}
+
+.dying-value {
+  font-weight: 700;
+  color: var(--damage-hover);
+}
+
+.combatant-row .death-save-buttons {
+  padding-left: 48px;
+}
+
+.fallen-section {
+  margin: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.fallen-header {
+  background: transparent;
+  border: none;
+  padding: 8px 0;
+  font-weight: 600;
+}
+
+.fallen-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.fallen-row:hover {
+  background: var(--panel);
+}
+
+.initiative-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

@@ -1,0 +1,43 @@
+/* @file The shell: tab containers and the tab switch in each top bar. */
+
+/* A tab adds no box of its own: its .app fills the window as it did in its own app. */
+.shell-tab {
+  display: contents;
+}
+
+.shell-tab[hidden] {
+  display: none;
+}
+
+.tab-switcher {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.tab-switcher button {
+  padding: 4px 10px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.tab-switcher button.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Phones: icons only, so the rest of the bar fits. */
+@media (max-width: 700px) {
+  .tab-switcher .tab-label {
+    display: none;
+  }
+
+  .tab-switcher button {
+    padding: 4px 8px;
+  }
+}

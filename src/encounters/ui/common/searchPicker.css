@@ -1,0 +1,66 @@
+/* @file Search picker: the search box, option rows with check marks, and delete buttons. */
+
+.picker-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 360px;
+  padding: 0 4px 0 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: text;
+}
+
+.picker-search.open,
+.picker-search:focus-within {
+  border-color: var(--accent);
+}
+
+.picker-search input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+}
+
+.picker-search input:focus {
+  outline: none;
+}
+
+.picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 240px;
+}
+
+.picker-check {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.picker-check.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.picker-delete {
+  opacity: 0;
+}
+
+.picker-option.active .picker-delete,
+.picker-delete:focus-visible {
+  opacity: 1;
+}
+
+.popup-empty {
+  padding: 6px 10px;
+}

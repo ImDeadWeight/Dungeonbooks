@@ -1,0 +1,264 @@
+/* @file Page view: title, scrolling canvas, text boxes, and link styling (shared with the peek panel). */
+
+.page-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.page-header {
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-title {
+  width: 100%;
+  font-size: 24px;
+  font-weight: 600;
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 6px;
+}
+
+.page-title:hover {
+  border-color: var(--border);
+}
+
+/* Page type and its fields, under the title. */
+.page-info-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 6px 0;
+}
+
+.page-info-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.page-info-field select {
+  padding: 3px 6px;
+  color: var(--text);
+}
+
+.page-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.page-scroll {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: auto;
+}
+
+/* Stat block button: lit while the panel shows. */
+.stat-block-button {
+  padding: 3px 10px;
+}
+
+.stat-block-button.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Stat block panel, beside the page's canvas. */
+.statblock-panel {
+  width: 400px;
+  max-width: 50%;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.statblock-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.statblock-panel-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.statblock-panel.editing {
+  width: 480px;
+}
+
+.statblock-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 12px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  container-type: inline-size;
+}
+
+/* Too narrow for six ability score boxes in a row (the panel on a phone): two rows of three. */
+@container (max-width: 430px) {
+  .sb-abilities:has(.sb-ability-edit) {
+    grid-template-columns: repeat(3, 1fr);
+    row-gap: 12px;
+  }
+}
+
+.statblock-new {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.statblock-new p,
+p.statblock-sync {
+  margin: 0;
+}
+
+.statblock-new .row {
+  align-items: flex-end;
+}
+
+/* Encounters' copy of the stat block, when it differs. */
+.statblock-sync {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.statblock-sync-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel-raised);
+}
+
+.page-canvas {
+  position: relative;
+  cursor: text;
+}
+
+.canvas-hint {
+  position: absolute;
+  left: 24px;
+  top: 16px;
+  margin: 0;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+/* A box looks like plain text until hovered or edited. */
+.text-box {
+  position: absolute;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+}
+
+.text-box:hover,
+.text-box:focus-within {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+}
+
+.text-box-grip {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 2px 0 6px;
+  color: var(--text-muted);
+  cursor: move;
+  visibility: hidden;
+  touch-action: none;
+  user-select: none;
+}
+
+.text-box:hover .text-box-grip,
+.text-box:focus-within .text-box-grip {
+  visibility: visible;
+}
+
+.text-box-grip button.icon {
+  padding: 2px;
+  color: var(--text-muted);
+}
+
+.text-box-resize {
+  position: absolute;
+  top: 0;
+  right: -4px;
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.box-editor {
+  padding: 0 10px 8px;
+  outline: none;
+  line-height: 1.5;
+  cursor: text;
+}
+
+.box-editor p,
+.peek-box p {
+  margin: 0 0 6px;
+}
+
+.box-editor :is(ul, ol),
+.peek-box :is(ul, ol) {
+  margin: 0 0 6px;
+  padding-left: 22px;
+}
+
+/* Links to other pages (in boxes and in the peek panel). */
+.page-link {
+  color: #7fb0ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.page-link-broken .page-link,
+.page-link.page-link-broken,
+.page-link-broken {
+  color: var(--text-muted);
+  text-decoration-style: dashed;
+}
+
+/* An unlinked mention of another page's title. */
+.link-suggestion {
+  text-decoration: underline dotted var(--accent);
+  text-underline-offset: 3px;
+}
+
+.link-suggestion-button {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 2px;
+  padding: 1px 3px;
+  border-radius: 4px;
+  border: 1px solid var(--accent-soft);
+  background: var(--accent-soft);
+  color: var(--text);
+  line-height: 1;
+}
+
+.link-suggestion-button:hover:not(:disabled) {
+  background: var(--accent);
+}

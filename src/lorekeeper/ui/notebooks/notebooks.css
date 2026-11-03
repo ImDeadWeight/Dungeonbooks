@@ -1,0 +1,148 @@
+/* @file Notebook menu: the open notebook's name in the top bar and its drop-down list. */
+
+.notebook-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.notebook-current {
+  max-width: 360px;
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 8px;
+}
+
+.notebook-current:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+.notebook-current .notebook-name {
+  font-weight: 600;
+}
+
+.notebook-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.notebook-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 8;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+}
+
+.notebook-list {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.notebook-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.notebook-row:hover {
+  background: var(--panel-hover);
+}
+
+.notebook-row.active {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.notebook-row input {
+  flex: 1;
+  padding: 2px 4px;
+}
+
+.notebook-check {
+  display: inline-flex;
+  width: 15px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.notebook-row.active .notebook-check {
+  color: var(--text);
+}
+
+.notebook-row-actions {
+  display: inline-flex;
+  visibility: hidden;
+}
+
+.notebook-row:hover .notebook-row-actions {
+  visibility: visible;
+}
+
+.notebook-dropdown-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.notebook-dropdown-actions button {
+  flex: 1;
+}
+
+.notebook-linked {
+  display: inline-flex;
+  color: var(--accent);
+}
+
+/* The open notebook's link to an Encounters campaign. */
+.campaign-link-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+}
+
+.campaign-link-section .spacer {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.campaign-link-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+/* Picker: search box over a scrolling list of Encounters campaigns. */
+.link-campaign-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.link-campaign-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 50vh;
+  overflow: auto;
+}
+
+.link-campaign-option {
+  justify-content: flex-start;
+  text-align: left;
+}

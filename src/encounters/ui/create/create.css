@@ -1,0 +1,56 @@
+/* @file Create screen: kind switch, form fields, and the encounter cart layout. */
+
+.create-screen {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+}
+
+.create-fields {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.kind-switch {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.kind-switch button.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.cart-builder {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 16px;
+  flex: 1;
+  min-height: 0;
+}
+
+.cart-picker,
+.cart {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+}
+
+.cart {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+@media (max-width: 760px) {
+  .cart-builder {
+    grid-template-columns: 1fr;
+  }
+}
