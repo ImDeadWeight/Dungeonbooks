@@ -1,40 +1,10 @@
 /**
- * @file The notebook library: which notebooks exist and which is open, plus
- * the exported-notebook file format (writing it, and reading it back safely).
+ * @file The exported-notebook file format: writing a campaign's notes as one
+ * file, and reading such a file back safely.
  */
 import { readSharedStatBlock } from 'campaign-link';
 import type { Id } from './ids';
 import type { Folder, Notebook, Page, PageInfo, TextBox } from './notebook';
-
-/** A notebook's entry in the library. Its id also names the notebook's file. */
-export interface NotebookInfo {
-  id: Id;
-  name: string;
-}
-
-/** Every notebook, and the one that is open. */
-export interface Library {
-  notebooks: NotebookInfo[];
-  activeId: Id | null;
-}
-
-/** Name of the first notebook (including one adopted from before there were several). */
-export const DEFAULT_NOTEBOOK_NAME = 'My notebook';
-/** Name given to notebooks created with the New notebook button. */
-export const NEW_NOTEBOOK_NAME = 'New notebook';
-
-/** A library with no notebooks yet. */
-export function emptyLibrary(): Library {
-  return { notebooks: [], activeId: null };
-}
-
-/** `wanted`, or `wanted (2)`, `wanted (3)`… whichever no notebook is using yet (ignoring case). */
-export function uniqueName(taken: string[], wanted: string): string {
-  const used = new Set(taken.map((n) => n.trim().toLowerCase()));
-  let name = wanted;
-  for (let i = 2; used.has(name.toLowerCase()); i++) name = `${wanted} (${i})`;
-  return name;
-}
 
 /** Marks an exported file as a Lorekeeper notebook. */
 const EXPORT_FORMAT = 'lorekeeper-notebook';

@@ -10,7 +10,7 @@ import { newId, type Id } from '../../domain/ids';
 import { conditionNameTaken, useCharacters } from '../../state/characterStore';
 import { useLibrary } from '../../state/libraryStore';
 import { useUi } from '../../state/uiStore';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { Select } from 'campaign-link/ui/common/Select';
 import { sameContent } from '../../domain/transfer/plan';
 import { closeUnlessDirty } from '../common/unsavedChanges';

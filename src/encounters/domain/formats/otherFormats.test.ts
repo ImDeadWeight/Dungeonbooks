@@ -22,7 +22,7 @@ import { FORMATS } from 'campaign-link/formats/registry';
 function encounterOf(formatId: FormatId, templates: CharacterTemplate[], lines: [string, number][]): Encounter {
   const lookup = (id: string) => templates.find((t) => t.id === id);
   const combatants = addToCombatants([], lines.map(([templateId, quantity]) => ({ templateId, quantity })), lookup, formatId);
-  return { id: 'e', name: 'E', campaignId: null, areaId: null, formatId, combatants, combat: inactiveCombat() };
+  return { id: 'e', name: 'E', campaignId: 'c', areaId: null, formatId, combatants, combat: inactiveCombat() };
 }
 const byName = (e: Encounter, name: string) => e.combatants.find((c) => c.name === name)!;
 

@@ -22,11 +22,14 @@ export const TRANSFER_KINDS = ['characters', 'encounter', 'area', 'campaign', 'e
 /** One of the export kinds; decides placement rules and which references must resolve. */
 export type TransferKind = (typeof TRANSFER_KINDS)[number];
 
+/** An encounter as a file carries it: backups from before every encounter had a campaign can have none (unfiled). */
+export type BundleEncounter = Omit<Encounter, 'campaignId'> & { campaignId: Encounter['campaignId'] | null };
+
 /** Everything an export carries: the item(s) plus every dependency they reference. */
 export interface Bundle {
   campaigns: Campaign[];
   areas: Area[];
-  encounters: Encounter[];
+  encounters: BundleEncounter[];
   templates: CharacterTemplate[];
   tags: Tag[];
   customConditions: CustomCondition[];

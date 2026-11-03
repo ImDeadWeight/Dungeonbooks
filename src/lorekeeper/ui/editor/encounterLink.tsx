@@ -1,7 +1,7 @@
 /**
  * @file The encounter-link node: a chip in page text that points at an
- * encounter in the linked Encounters campaign. It stores the encounter's id
- * (and its name when linked, shown if Encounters isn't available), and shows
+ * encounter in the campaign. It stores the encounter's id (and its name when
+ * linked, shown if the encounter is gone), and shows
  * the encounter's current name and combat state. Clicking it opens the
  * encounter in Encounters.
  */
@@ -28,7 +28,7 @@ function EncounterChip({ node }: NodeViewProps) {
     <NodeViewWrapper as="span" className={`encounter-chip${missing ? ' missing' : ''}`} contentEditable={false}>
       <button
         type="button"
-        title={missing ? 'This encounter is no longer in the linked Encounters campaign' : 'Open in Encounters'}
+        title={missing ? 'This encounter is no longer in this campaign' : 'Open in Encounters'}
         // Don't move the caret or select the chip; just open it.
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => openInEncounters({ app: 'encounters', kind: 'encounter', encounterId })}

@@ -39,7 +39,7 @@ function fight(heroInit: number, goblinInit: number): Encounter {
     'pf2e',
   );
   const enc: Encounter = {
-    id: 'e', name: 'E', campaignId: null, areaId: null, formatId: 'pf2e', combatants,
+    id: 'e', name: 'E', campaignId: 'c', areaId: null, formatId: 'pf2e', combatants,
     combat: { ...inactiveCombat(), active: true },
   };
   const [h, g] = combatants;

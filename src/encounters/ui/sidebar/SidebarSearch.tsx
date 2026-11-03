@@ -1,6 +1,6 @@
 /**
  * @file The sidebar's search box, and what the tree needs to follow it: which
- * rows to show, which campaigns and areas to open, and the matched text to
+ * rows to show, which areas to open, and the matched text to
  * mark.
  */
 import { Search, X } from 'lucide-react';
@@ -18,17 +18,16 @@ export function useTreeFilter() {
 }
 
 /**
- * Whether a tree node shows its contents. While searching, nodes leading to a
- * match open (or `opensForSearch` decides), and toggling only lasts for that
- * search; the saved folds stay as the user left them. `defaultOpen` is how
- * the node starts when never toggled (the Unfiled section starts closed).
+ * Whether a tree node shows its contents (open until the user folds it).
+ * While searching, nodes leading to a match open, and toggling only lasts for
+ * that search; the saved folds stay as the user left them.
  */
-export function useNodeOpen(id: Id, defaultOpen = true, opensForSearch?: boolean): { expanded: boolean; toggle: () => void } {
+export function useNodeOpen(id: Id): { expanded: boolean; toggle: () => void } {
   const filter = useTreeFilter();
-  const saved = useUi((s) => defaultOpen !== !!s.collapsedNodes[id]);
+  const saved = useUi((s) => !s.collapsedNodes[id]);
   const flipped = useUi((s) => !!s.searchToggled[id]);
   if (!filter) return { expanded: saved, toggle: () => useUi.getState().toggleNode(id) };
-  const opened = opensForSearch ?? filter.opened.has(id);
+  const opened = filter.opened.has(id);
   return { expanded: (opened || saved) !== flipped, toggle: () => useUi.getState().toggleSearchNode(id) };
 }
 
@@ -56,7 +55,7 @@ export function SidebarSearch() {
       <input
         value={text}
         placeholder="Search encounters and areas"
-        aria-label="Search campaigns, areas and encounters"
+        aria-label="Search areas and encounters"
         spellCheck={false}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {

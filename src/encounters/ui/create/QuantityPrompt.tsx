@@ -2,7 +2,7 @@
  * @file Small dialog asking how many copies of an NPC to add (1–100).
  */
 import { useState } from 'react';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 
 /** Props for QuantityPrompt. */
 interface Props {

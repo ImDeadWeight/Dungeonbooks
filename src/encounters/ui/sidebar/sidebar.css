@@ -184,37 +184,10 @@
   gap: 12px;
 }
 
-.unfiled {
-  flex-shrink: 0;
-  border-top: 1px solid var(--border);
-}
-
-.unfiled.drop-target {
+/* Dropping on the tree's empty space puts an area or encounter directly in the campaign. */
+.campaign-tree.drop-target {
   outline: 2px dashed var(--accent);
   outline-offset: -2px;
-}
-
-.unfiled-header {
-  width: 100%;
-  justify-content: flex-start;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 8px 10px;
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.unfiled-list {
-  max-height: 30vh;
-  overflow-y: auto;
-  padding-bottom: 6px;
-}
-
-.unfiled-empty {
-  font-size: 12px;
-  margin: 0;
-  padding: 2px 12px 6px;
 }
 
 /* Search box under the header; the magnifier and clear button sit inside the field. */

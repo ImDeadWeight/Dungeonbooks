@@ -10,7 +10,7 @@ import { rollDie, formatModifier } from 'campaign-link/formats/dice';
 import type { Encounter } from '../../domain/library/types';
 import { runCombatAction, runCombatBoundary } from '../../state/combatStore';
 import { useCombatRules } from '../../state/useCombatRules';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 
 /**
  * Shown whenever an active combat has combatants without initiative: PCs

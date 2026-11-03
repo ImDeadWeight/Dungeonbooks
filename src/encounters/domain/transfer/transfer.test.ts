@@ -41,7 +41,7 @@ function state(): AppData {
   return {
     campaigns: [{ id: 'c1', name: 'Lost Mine', formatId: 'dnd5e' }],
     areas: [{ id: 'a1', name: 'Cave', campaignId: 'c1', parentAreaId: null }],
-    encounters: [ambush, { id: 'e2', name: 'Loose', campaignId: null, areaId: null, formatId: 'dnd5e', combatants: [], combat: inactiveCombat() }],
+    encounters: [ambush, { id: 'e2', name: 'Loose', campaignId: 'c1', areaId: null, formatId: 'dnd5e', combatants: [], combat: inactiveCombat() }],
     templates: [goblin, hero],
     tags: [{ id: 't-goblinoid', name: 'Goblinoid' }, { id: 't-unused', name: 'Unused' }],
     customConditions: [{ id: 'c-bleeding', name: 'Bleeding', formatId: 'dnd5e', effect: 'Loses 1d4 HP', endsWhen: '', repeatsSave: true }],
@@ -59,7 +59,7 @@ function roundTrip(kind: TransferKind, bundle: Bundle): TransferFile {
 }
 
 /** Plans and applies an import the way the preview dialog does. */
-function importInto(target: AppData, file: TransferFile, resolutions: Record<string, Resolution> = {}, placement = { campaignId: null as string | null, areaId: null as string | null }) {
+function importInto(target: AppData, file: TransferFile, resolutions: Record<string, Resolution> = {}, placement = { campaignId: 'c1', areaId: null as string | null }) {
   return applyImport(target, file, planImport(file, target), resolutions, placement);
 }
 
@@ -122,6 +122,16 @@ describe('import into an empty app', () => {
     ] };
     const parsed = parseTransferFile(JSON.stringify(toTransferFile('everything', exportEverything(looped))));
     expect(parsed.ok).toBe(false);
+  });
+
+  it("an old backup's unfiled encounters go into the chosen campaign", () => {
+    const file = JSON.parse(JSON.stringify(toTransferFile('everything', exportEverything(state())))) as { data: { encounters: Record<string, unknown>[] } };
+    file.data.encounters = file.data.encounters.map((e) => (e.id === 'e2' ? { ...e, campaignId: null } : e));
+    const parsed = parseTransferFile(JSON.stringify(file));
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(planImport(parsed.file, empty()).placement).toBe('campaign-required');
+    const { data } = importInto(empty(), parsed.file, {}, { campaignId: 'c1', areaId: null });
+    expect(data.encounters.find((e) => e.id === 'e2')).toMatchObject({ campaignId: 'c1', areaId: null });
   });
 
   it('a single encounter goes where the user placed it', () => {

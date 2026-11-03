@@ -1,6 +1,6 @@
 /**
  * @file The create/edit character form: PC/NPC, name (with suggestions from
- * linked Lorekeeper notebooks), format, tags, dying rules, and the format's
+ * the campaigns' notes), format, tags, dying rules, and the format's
  * stat block editor (or the Lorekeeper page's stat block).
  */
 import { useCallback, useState } from 'react';

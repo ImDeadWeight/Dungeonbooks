@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { descendantFolderIds, infoForType, PAGE_TYPES, type CharacterKind, type PageType } from '../../domain/notebook';
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 
 /** Shown while the UI store names a folder to set page types in. */
 export function SetPageTypeDialog() {

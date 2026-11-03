@@ -8,7 +8,7 @@ import { FORMAT_LIST } from 'campaign-link/formats/registry';
 import { useCharacters } from '../../state/characterStore';
 import { useUi } from '../../state/uiStore';
 import { confirmThen } from '../common/ConfirmDialog';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import './conditions.css';
 
 /** One condition with its rules text; custom ones get edit/delete buttons. */

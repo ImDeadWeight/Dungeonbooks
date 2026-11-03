@@ -9,6 +9,11 @@
   display: none;
 }
 
+/* The bar keeps to the window's width (a long campaign name is cut short instead of widening the page). */
+.top-bar {
+  min-width: 0;
+}
+
 .tab-switcher {
   display: flex;
   gap: 2px;

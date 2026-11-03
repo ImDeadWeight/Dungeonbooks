@@ -5,7 +5,7 @@
  */
 import type { CharacterKind, LoreRef } from './characters';
 
-/** A Character page from a linked Lorekeeper notebook. */
+/** A Character page from a campaign's notes. */
 export interface LoreCharacter extends LoreRef {
   title: string;
   kind: CharacterKind;

@@ -1,23 +1,20 @@
 /**
- * @file Edit dialogs for sidebar items: rename an area or encounter and change
- * which campaign/area it belongs to (areas can sit inside other areas), change
- * an empty encounter's format, or rename a campaign, set its default format
- * and link it to a Lorekeeper notebook.
+ * @file Edit dialog for sidebar items: rename an area or encounter and change
+ * which campaign/area it belongs to (areas can sit inside other areas), and
+ * change an empty encounter's format. Campaigns are edited from the campaign
+ * menu.
  */
 import { useMemo, useState } from 'react';
 import type { FormatId } from 'campaign-link/formats/formatIds';
 import { descendantAreaIds, type EncounterDestination } from '../../domain/library/tree';
+import { activeCampaignId } from '../../../campaigns/campaignStore';
 import type { Id } from '../../domain/ids';
-import { useLinks } from '../../../bridge/links';
-import { linkCampaign } from '../../state/campaignLink';
 import { useLibrary } from '../../state/libraryStore';
 import { useUi } from '../../state/uiStore';
 import { FormatField } from '../common/FormatField';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { closeUnlessDirty } from '../common/unsavedChanges';
 import { ParentPicker } from '../create/ParentPicker';
-import { CampaignFormatField } from '../create/SimpleForms';
-import { LorekeeperNotebookField } from './LorekeeperNotebookField';
 
 /** Which item to edit. */
 interface Props {
@@ -26,10 +23,8 @@ interface Props {
 }
 
 /** Converts chosen parents into a move destination. */
-function destinationOf(campaignId: Id | null, areaId: Id | null): EncounterDestination {
-  if (areaId) return { kind: 'area', areaId };
-  if (campaignId) return { kind: 'campaign', campaignId };
-  return { kind: 'root' };
+function destinationOf(campaignId: Id, areaId: Id | null): EncounterDestination {
+  return areaId ? { kind: 'area', areaId } : { kind: 'campaign', campaignId };
 }
 
 /** Rename an area or encounter and change which campaign/area it belongs to. */
@@ -38,7 +33,7 @@ export function EditTreeItem({ kind, id }: Props) {
   const closeModal = useUi((s) => s.closeModal);
   const [name, setName] = useState(item?.name ?? '');
   const [initialParents] = useState({
-    campaignId: item?.campaignId ?? null,
+    campaignId: item?.campaignId ?? activeCampaignId(),
     // For an area, the "area" picked is the one it sits inside.
     areaId: !item ? null : 'parentAreaId' in item ? item.parentAreaId : item.areaId,
   });
@@ -53,8 +48,7 @@ export function EditTreeItem({ kind, id }: Props) {
   );
   if (!item) return null;
 
-  // Needs a name; areas also need a campaign.
-  const valid = !!name.trim() && (kind === 'encounter' || !!parents.campaignId);
+  const valid = !!name.trim();
   const dirty =
     name !== item.name ||
     parents.campaignId !== initialParents.campaignId ||
@@ -68,9 +62,7 @@ export function EditTreeItem({ kind, id }: Props) {
     if (!valid) return;
     const lib = useLibrary.getState();
     if (name.trim() !== item.name) lib.rename(kind, id, name.trim());
-    if (kind === 'area' && parents.campaignId) {
-      lib.moveArea(id, parents.areaId ? { kind: 'area', areaId: parents.areaId } : { kind: 'campaign', campaignId: parents.campaignId });
-    }
+    if (kind === 'area') lib.moveArea(id, destinationOf(parents.campaignId, parents.areaId));
     if (kind === 'encounter') lib.moveEncounter(id, destinationOf(parents.campaignId, parents.areaId));
     if (kind === 'encounter' && formatId && formatId !== initialFormat) lib.setEncounterFormat(id, formatId);
     closeModal();
@@ -95,7 +87,6 @@ export function EditTreeItem({ kind, id }: Props) {
         </label>
         <ParentPicker
           {...parents}
-          requireCampaign={kind === 'area'}
           showArea
           areaLabel={kind === 'area' ? 'Inside area' : 'Area'}
           excludeAreaIds={excluded}
@@ -110,56 +101,6 @@ export function EditTreeItem({ kind, id }: Props) {
             onChange={setFormatId}
           />
         )}
-      </div>
-    </Modal>
-  );
-}
-
-/** Rename a campaign and choose the format its new encounters and characters start with. */
-export function EditCampaign({ id }: { id: Id }) {
-  const campaign = useLibrary((s) => s.campaigns.find((c) => c.id === id));
-  const closeModal = useUi((s) => s.closeModal);
-  const [name, setName] = useState(campaign?.name ?? '');
-  const [formatId, setFormatId] = useState(campaign?.formatId ?? null);
-  const [initialNotebook] = useState<Id | null>(() => useLinks.getState().notebookByCampaign[id] ?? null);
-  const [notebookId, setNotebookId] = useState<Id | null>(initialNotebook);
-  if (!campaign) return null;
-  const dirty = name !== campaign.name || formatId !== campaign.formatId || notebookId !== initialNotebook;
-  const cancel = () => closeUnlessDirty(dirty, closeModal);
-
-  // Apply the rename, format and Lorekeeper link, then close.
-  const save = () => {
-    if (!name.trim()) return;
-    const lib = useLibrary.getState();
-    if (name.trim() !== campaign.name) lib.rename('campaign', id, name.trim());
-    if (formatId !== campaign.formatId) lib.setCampaignFormat(id, formatId);
-    if (notebookId !== initialNotebook) linkCampaign(id, notebookId);
-    closeModal();
-  };
-
-  return (
-    <Modal
-      title="Edit campaign"
-      size="small"
-      onClose={cancel}
-      footer={
-        <>
-          <button onClick={cancel}>Cancel</button>
-          <button className="primary" disabled={!name.trim()} onClick={save}>Save</button>
-        </>
-      }
-    >
-      <div className="edit-tree-item">
-        <label className="field">
-          Name
-          <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
-        </label>
-        <CampaignFormatField value={formatId} onChange={setFormatId} />
-        <p className="muted">
-          New encounters in this campaign, and new characters created for them, start with this format. Existing
-          encounters and characters are not changed.
-        </p>
-        <LorekeeperNotebookField campaignId={id} value={notebookId} onChange={setNotebookId} />
       </div>
     </Modal>
   );

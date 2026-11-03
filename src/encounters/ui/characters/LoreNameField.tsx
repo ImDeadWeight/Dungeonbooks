@@ -1,6 +1,6 @@
 /**
  * @file Naming a character from Lorekeeper: while typing a name, Character
- * pages from linked notebooks that match appear under the field; picking one
+ * pages from the campaigns' notes that match appear under the field; picking one
  * fills in the name and PC/NPC and remembers the page. The chip below the
  * form shows which page a character came from, opens it, or forgets it, and
  * offers the page's stat block when it differs from the character's.
@@ -19,14 +19,14 @@ import { useCatalogs } from '../../../bridge/catalogs';
 import { useCharacters } from '../../state/characterStore';
 import { scrollOptionIntoView, usePopover } from 'campaign-link/ui/common/usePopover';
 
-/** Every Character page in the notebooks linked to campaigns. */
+/** Every Character page in every campaign's notes. */
 function useLoreCharacters(): LoreCharacter[] {
   const catalogs = useCatalogs((s) => s.lore);
   return useMemo(() => {
     const seen = new Set<Id>();
     const result: LoreCharacter[] = [];
     for (const catalog of Object.values(catalogs)) {
-      // Two campaigns can't share a notebook, but stay safe if a stale catalogue lingers.
+      // One catalogue per campaign; stay safe if a stale one lingers.
       if (seen.has(catalog.notebookId)) continue;
       seen.add(catalog.notebookId);
       for (const page of catalog.pages) {
@@ -135,7 +135,7 @@ export function LoreSourceChip({ lore, onForget }: { lore: LoreRef | null; onFor
     <div className="lore-source row">
       <BookOpen size={15} />
       <span className="spacer">
-        From Lorekeeper: <strong>{title ?? 'a page in a notebook not linked here'}</strong>
+        From Lorekeeper: <strong>{title ?? 'a page that is no longer in any campaign'}</strong>
       </span>
       <button type="button" onClick={() => openInLorekeeper(lore)}>
         Open in Lorekeeper
@@ -147,7 +147,7 @@ export function LoreSourceChip({ lore, onForget }: { lore: LoreRef | null; onFor
   );
 }
 
-/** The page a character came from, as its linked notebook publishes it; null when that notebook isn't linked here. */
+/** The page a character came from, as its campaign's notes publish it; null when it's gone. */
 function findLorePage(catalogs: Record<Id, LorekeeperCatalog>, lore: LoreRef | null): LorePage | null {
   if (!lore) return null;
   const catalog = Object.values(catalogs).find((c) => c.notebookId === lore.notebookId);

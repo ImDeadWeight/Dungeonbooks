@@ -5,11 +5,10 @@
 import { useMemo, useState } from 'react';
 import { openConflicts, planImport, type ItemStatus, type PlanItem, type Resolution } from '../../domain/transfer/plan';
 import type { TransferFile, TransferKind } from '../../domain/transfer/types';
-import { useCharacters } from '../../state/characterStore';
-import { useLibrary } from '../../state/libraryStore';
-import { commitImport } from '../../state/transferActions';
+import { activeCampaignId } from '../../../campaigns/campaignStore';
+import { commitImport, currentAppData } from '../../state/transferActions';
 import { useUi } from '../../state/uiStore';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { ParentPicker } from '../create/ParentPicker';
 import { ConflictList } from './ConflictList';
 import './transfer.css';
@@ -58,24 +57,17 @@ function Summary({ items }: { items: PlanItem[] }) {
 /** Preview and options for importing one file; nothing changes until Import. */
 export function ImportPreview({ file }: { file: TransferFile }) {
   const closeModal = useUi((s) => s.closeModal);
-  const campaigns = useLibrary((s) => s.campaigns);
   // Plan once against the data as it was when the dialog opened.
-  const plan = useMemo(() => {
-    const { campaigns: c, areas, encounters } = useLibrary.getState();
-    const { templates, tags, customConditions } = useCharacters.getState();
-    return planImport(file, { campaigns: c, areas, encounters, templates, tags, customConditions });
-  }, [file]);
+  const plan = useMemo(() => planImport(file, currentAppData()), [file]);
   const [resolutions, setResolutions] = useState<Record<string, Resolution>>({});
-  const [placement, setPlacement] = useState({ campaignId: null as string | null, areaId: null as string | null });
+  // Into the open campaign unless the user picks another.
+  const [placement, setPlacement] = useState(() => ({ campaignId: activeCampaignId(), areaId: null as string | null }));
 
   const conflicts = openConflicts(file.data, plan, resolutions);
-  const needsCampaign = plan.placement === 'campaign-required';
-  const blocked = needsCampaign && !placement.campaignId;
   const exported = new Date(file.exportedAt);
 
   // Apply the import; closes only if it succeeded.
   const doImport = () => {
-    if (blocked) return;
     if (commitImport(file, plan, resolutions, placement)) closeModal();
   };
 
@@ -87,7 +79,7 @@ export function ImportPreview({ file }: { file: TransferFile }) {
       footer={
         <>
           <button onClick={closeModal}>Cancel</button>
-          <button className="primary" disabled={blocked} onClick={doImport}>Import</button>
+          <button className="primary" onClick={doImport}>Import</button>
         </>
       }
     >
@@ -99,18 +91,12 @@ export function ImportPreview({ file }: { file: TransferFile }) {
         {plan.placement !== 'none' && (
           <section className="import-section">
             <h3>Where should it go?</h3>
-            {needsCampaign && campaigns.length === 0 ? (
-              <p className="muted">Areas live inside a campaign. Create a campaign first, then import again.</p>
-            ) : (
-              <div className="row wrap">
-                <ParentPicker
-                  {...placement}
-                  requireCampaign={needsCampaign}
-                  showArea={plan.placement === 'optional'}
-                  onChange={setPlacement}
-                />
-              </div>
+            {file.kind !== 'area' && file.kind !== 'encounter' && (
+              <p className="muted">Some encounters in this file aren't in a campaign; they go into the one you pick.</p>
             )}
+            <div className="row wrap">
+              <ParentPicker {...placement} showArea={plan.placement === 'optional'} onChange={setPlacement} />
+            </div>
           </section>
         )}
 

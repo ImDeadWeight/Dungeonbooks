@@ -1,6 +1,6 @@
 /**
- * @file The Link encounter button and picker: a searchable list of the
- * encounters in the Encounters campaign linked to the open notebook. Picking
+ * @file The Link encounter button and picker: a searchable list of the open
+ * campaign's encounters. Picking
  * one puts an encounter chip where the caret last was on this page, or in a
  * new box when no box on the page has been used yet.
  */
@@ -9,10 +9,10 @@ import { Swords } from 'lucide-react';
 import { useState } from 'react';
 import type { Id } from '../../domain/ids';
 import { byName } from '../../domain/notebook';
-import { useOpenNotebookCatalog, useOpenNotebookLinkStatus } from '../../state/campaignLink';
+import { useOpenNotebookCatalog } from '../../state/campaignLink';
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { ENCOUNTER_LINK, insertEncounterLink } from '../editor/encounterLink';
 import { lastEditorOn } from '../editor/lastEditor';
 import { EncounterStateBadge } from './EncounterState';
@@ -39,17 +39,14 @@ function placeEncounterLink(pageId: Id, encounter: LinkEncounter) {
   useUi.getState().setFocusBox(boxId);
 }
 
-/** The page header's Link encounter button (usable once the notebook is linked to a campaign). */
+/** The page header's Link encounter button. */
 export function LinkEncounterButton({ pageId }: { pageId: Id }) {
-  const status = useOpenNotebookLinkStatus();
   const [open, setOpen] = useState(false);
-  const linked = status === 'linked';
   return (
     <>
       <button
         className="link-encounter-button"
-        disabled={!linked}
-        title={linked ? 'Link an encounter from Encounters' : 'Link this notebook to an Encounters campaign first (notebook menu)'}
+        title="Link one of this campaign's encounters"
         // Keep the caret in the box being written in.
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen(true)}
@@ -61,7 +58,7 @@ export function LinkEncounterButton({ pageId }: { pageId: Id }) {
   );
 }
 
-/** Searchable list of the linked campaign's encounters. */
+/** Searchable list of the campaign's encounters. */
 function LinkEncounterDialog({ pageId, close }: { pageId: Id; close: () => void }) {
   const catalog = useOpenNotebookCatalog();
   const [query, setQuery] = useState('');

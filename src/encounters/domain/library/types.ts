@@ -1,21 +1,16 @@
 /**
  * @file Library model: campaigns contain areas and encounters; areas contain
  * encounters and other areas; encounters contain combatants and their combat
- * state.
- * Encounters with no campaign are "unfiled".
+ * state. The campaign list itself is the app's (src/campaigns); the
+ * Encounters tab keeps each campaign's areas and encounters.
  */
 import type { FormatId } from 'campaign-link/formats/formatIds';
+import type { Campaign } from '../../../campaigns/types';
 import type { Id } from '../ids';
 import type { Combatant } from '../combat/types';
 import type { CombatState } from '../combat/types';
 
-/** Top-level folder in the sidebar. */
-export interface Campaign {
-  id: Id;
-  name: string;
-  /** Default format for this campaign's new encounters and their new characters; null = none. */
-  formatId: FormatId | null;
-}
+export type { Campaign };
 
 /** A location within a campaign that groups encounters (e.g. "Cragmaw Cave"). */
 export interface Area {
@@ -31,8 +26,7 @@ export interface Area {
 export interface Encounter {
   id: Id;
   name: string;
-  /** null = unfiled (lives at the root of the sidebar). */
-  campaignId: Id | null;
+  campaignId: Id;
   /** null = sits directly under its campaign. */
   areaId: Id | null;
   /** The game system; every combatant's character uses it, and its combat rules apply. */
@@ -41,14 +35,18 @@ export interface Encounter {
   combat: CombatState;
 }
 
-/** Everything in the sidebar tree, as stored in library.json. */
-export interface Library {
-  campaigns: Campaign[];
+/** Every campaign's areas and encounters, as stored in library.json. */
+export interface EncounterLibrary {
   areas: Area[];
   encounters: Encounter[];
 }
 
+/** The library together with the campaign list, as tree operations and export/import see it. */
+export interface Library extends EncounterLibrary {
+  campaigns: Campaign[];
+}
+
 /** A library with nothing in it (first run). */
-export function emptyLibrary(): Library {
-  return { campaigns: [], areas: [], encounters: [] };
+export function emptyLibrary(): EncounterLibrary {
+  return { areas: [], encounters: [] };
 }

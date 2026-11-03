@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { exportFileName, exportText, parseNotebookFile, uniqueName } from './library';
+import { exportFileName, exportText, parseNotebookFile } from './library';
 import { createEmptyStatBlock } from 'campaign-link/formats/dnd5e/statBlock';
 import type { Notebook } from './notebook';
 
@@ -14,16 +14,6 @@ const notebook: Notebook = {
     },
   ],
 };
-
-describe('unique notebook names', () => {
-  it('keeps a free name', () => {
-    expect(uniqueName(['Veilstrand'], 'New notebook')).toBe('New notebook');
-  });
-
-  it('numbers a taken name, ignoring case', () => {
-    expect(uniqueName(['new notebook', 'New notebook (2)'], 'New notebook')).toBe('New notebook (3)');
-  });
-});
 
 describe('export file names', () => {
   it('drops characters Windows forbids', () => {

@@ -35,8 +35,9 @@ export interface CharacterTemplate {
   lore?: LoreRef;
 }
 
-/** A page in a Lorekeeper notebook (see the campaign-link package). */
+/** A page in a campaign's notes (see the campaign-link package). */
 export interface LoreRef {
+  /** The campaign whose notes hold the page (its notebook has the campaign's id); named as in older saves and exports. */
   notebookId: Id;
   pageId: Id;
 }

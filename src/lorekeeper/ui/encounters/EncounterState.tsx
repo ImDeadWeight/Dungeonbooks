@@ -1,5 +1,5 @@
 /**
- * @file How an encounter from the linked Encounters campaign is described:
+ * @file How an encounter from the Encounters tab is described:
  * whether its combat is running (and which round) or not, and the condition
  * of a character in it.
  */

@@ -1,7 +1,6 @@
 /**
- * @file Documents that belong to neither tab: the links between campaigns
- * and notebooks, the shell's view, and the record of what was copied from
- * the old apps.
+ * @file Documents that belong to neither tab: the campaign list, the
+ * shell's view, and the record of what was copied from the old apps.
  */
 import { createDocuments } from '../storage/documents';
 

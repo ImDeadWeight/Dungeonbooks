@@ -10,7 +10,8 @@ import { MAX_CONDITION_VALUE, type ActiveCondition, type CustomCondition } from 
 import type { FormatId } from 'campaign-link/formats/formatIds';
 import { FORMATS } from 'campaign-link/formats/registry';
 import { LEGACY_FORMAT_ID } from '../library/upgrade';
-import type { Area, Campaign, Encounter } from '../library/types';
+import type { Area, Campaign } from '../library/types';
+import type { BundleEncounter } from './types';
 import {
   fail,
   optional,
@@ -156,7 +157,7 @@ function readCombat(v: unknown, path: string, combatants: Combatant[]): CombatSt
 }
 
 /** Reads an encounter with its combatants and combat state. Files from before encounter formats are 5e. */
-export function readEncounter(v: unknown, path: string, repeats: RepeatsSave = () => false): Encounter {
+export function readEncounter(v: unknown, path: string, repeats: RepeatsSave = () => false): BundleEncounter {
   const o = readObject(v, path);
   const combatants = readArray(o.combatants, `${path}.combatants`, (x, p) => readCombatant(x, p, repeats), 1000);
   assertUniqueIds(combatants, `${path}.combatants`);

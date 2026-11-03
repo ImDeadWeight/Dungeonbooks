@@ -1,0 +1,153 @@
+/* @file Campaign menu: the open campaign's name in the top bar, its drop-down list, and the campaign dialog. */
+
+/* Shrinks (with the name cut short) before the bar's buttons do. */
+.campaign-menu {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.campaign-current {
+  /* The menu can shrink below its content; the name is then cut short. */
+  max-width: min(360px, 100%);
+  min-width: 0;
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 8px;
+}
+
+.campaign-current:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+.campaign-current .campaign-name {
+  font-weight: 600;
+}
+
+.campaign-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.campaign-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 8;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+}
+
+.campaign-list {
+  max-height: 50vh;
+  overflow: auto;
+  padding: 4px 0;
+}
+
+.campaign-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 8px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.campaign-row:hover {
+  background: var(--panel-hover);
+}
+
+.campaign-row.active {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.campaign-row input {
+  flex: 1;
+  padding: 2px 4px;
+}
+
+.campaign-check {
+  display: inline-flex;
+  width: 15px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.campaign-row.active .campaign-check {
+  color: var(--text);
+}
+
+.campaign-row-actions {
+  display: inline-flex;
+  visibility: hidden;
+}
+
+.campaign-row:hover .campaign-row-actions {
+  visibility: visible;
+}
+
+.campaign-dropdown-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.campaign-dropdown-actions button {
+  flex: 1;
+}
+
+.campaign-current .campaign-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.campaign-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.campaign-dialog-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.campaign-dialog-danger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Phones: the list fits the screen. */
+@media (max-width: 700px) {
+  .campaign-dropdown {
+    width: min(340px, calc(100vw - 24px));
+  }
+}
+
+/* Touch: row buttons always show (no hover), and rows are finger-sized. */
+@media (hover: none) {
+  .campaign-row-actions {
+    visibility: visible;
+  }
+}
+
+@media (pointer: coarse) {
+  .campaign-row {
+    min-height: 44px;
+  }
+}

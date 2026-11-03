@@ -1,12 +1,14 @@
 /**
  * @file Connects the stores to saved files: loads library.json,
  * characters.json and conditions.json at startup (upgrading older data),
- * then saves each one shortly after its store changes.
+ * then saves each one shortly after its store changes. Load after the
+ * campaign list.
  */
 import { upgradeCustomCondition, type LegacyCustomCondition } from '../domain/conditionDefaults';
-import { normalizeAreas } from '../domain/library/tree';
+import { useCampaigns } from '../../campaigns/campaignStore';
+import { adoptOrphans, normalizeAreas } from '../domain/library/tree';
 import { upgradeEncounters } from '../domain/library/upgrade';
-import { emptyLibrary, type Area, type Campaign } from '../domain/library/types';
+import { emptyLibrary, type Area } from '../domain/library/types';
 import { loadDocument, saveDocument } from '../storage/documents';
 import { useCharacters } from './characterStore';
 import { useLibrary } from './libraryStore';
@@ -41,14 +43,20 @@ export async function startPersistence(): Promise<void> {
 
   // Older saves predate condition rules text and the per-turn save flag.
   const customConditions = (conditions.data.custom as LegacyCustomCondition[]).map(upgradeCustomCondition);
-  useLibrary.getState().replaceAll({
-    ...library.data,
-    // Older saves predate campaign formats and nested areas.
-    campaigns: library.data.campaigns.map((c: Campaign) => ({ ...c, formatId: c.formatId ?? null })),
-    areas: normalizeAreas(library.data.areas.map((a: Area) => ({ ...a, parentAreaId: a.parentAreaId ?? null }))),
-    // Older saves predate encounter formats, format-neutral dying progress and condition values.
-    encounters: upgradeEncounters(library.data.encounters, customConditions),
-  });
+  const { campaigns, activeId } = useCampaigns.getState();
+  // Unfiled encounters from older saves (and anything whose campaign is gone) go into the open campaign.
+  useLibrary.getState().replaceAll(
+    adoptOrphans(
+      {
+        // Older saves predate nested areas.
+        areas: normalizeAreas(library.data.areas.map((a: Area) => ({ ...a, parentAreaId: a.parentAreaId ?? null }))),
+        // Older saves predate encounter formats, format-neutral dying progress and condition values.
+        encounters: upgradeEncounters(library.data.encounters, customConditions),
+      },
+      new Set(campaigns.map((c) => c.id)),
+      activeId!,
+    ),
+  );
   useCharacters.getState().replaceAll({
     templates: characters.data.templates,
     tags: characters.data.tags,
@@ -56,8 +64,8 @@ export async function startPersistence(): Promise<void> {
   });
 
   const saveLibrary = debouncedSaver('library', () => {
-    const { campaigns, areas, encounters } = useLibrary.getState();
-    return { campaigns, areas, encounters };
+    const { areas, encounters } = useLibrary.getState();
+    return { areas, encounters };
   });
   const saveCharacters = debouncedSaver('characters', () => {
     const { templates, tags } = useCharacters.getState();

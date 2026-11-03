@@ -6,8 +6,7 @@
 
 /* No hover: controls that only appear on hover show for the row last tapped (tapping a row focuses it). */
 @media (hover: none) {
-  .tree-row:focus-within .tree-actions,
-  .notebook-row-actions {
+  .tree-row:focus-within .tree-actions {
     visibility: visible;
   }
 
@@ -35,7 +34,6 @@
   }
 
   .tree-row,
-  .notebook-row,
   .link-encounter-option,
   .encounter-entry {
     min-height: 44px;

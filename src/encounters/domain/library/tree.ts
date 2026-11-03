@@ -4,7 +4,7 @@
  * encounters use a character. Areas can nest inside other areas.
  */
 import type { Id } from '../ids';
-import type { Area, Encounter, Library } from './types';
+import type { Area, Encounter, EncounterLibrary, Library } from './types';
 
 /**
  * Top-level areas of a campaign. An area whose parent is missing (e.g. bad
@@ -91,47 +91,37 @@ export function normalizeAreas(areas: Area[]): Area[] {
 }
 
 /** Encounters sitting directly under a campaign (not inside an area). */
-export function looseEncountersOf(lib: Library, campaignId: Id): Encounter[] {
+export function looseEncountersOf(lib: EncounterLibrary, campaignId: Id): Encounter[] {
   return lib.encounters.filter((e) => e.campaignId === campaignId && e.areaId === null);
 }
 
 /** Encounters inside an area. */
-export function encountersOfArea(lib: Library, areaId: Id): Encounter[] {
+export function encountersOfArea(lib: EncounterLibrary, areaId: Id): Encounter[] {
   return lib.encounters.filter((e) => e.areaId === areaId);
-}
-
-/** Encounters that belong to no campaign. */
-export function unfiledEncounters(lib: Library): Encounter[] {
-  return lib.encounters.filter((e) => e.campaignId === null);
 }
 
 /** What the sidebar shows while searching. */
 export interface TreeFilter {
-  /** Campaigns, areas and encounters to show: matches, what's above them, and everything inside a matching campaign or area. */
+  /** Areas and encounters to show: matches, the areas above them, and everything inside a matching area. */
   visible: Set<Id>;
-  /** Campaigns and areas opened because a match is inside them. */
+  /** Areas opened because a match is inside them. */
   opened: Set<Id>;
 }
 
 /**
- * Narrows the sidebar tree to a search: campaigns, areas and encounters whose
- * names contain the text (ignoring case), the campaigns and areas above them,
- * and everything inside a matching campaign or area. Null when the search is
- * blank.
+ * Narrows a campaign's tree to a search: areas and encounters whose names
+ * contain the text (ignoring case), the areas above them, and everything
+ * inside a matching area. Null when the search is blank.
  */
-export function filterLibrary(lib: Library, query: string): TreeFilter | null {
+export function filterCampaign(lib: EncounterLibrary, campaignId: Id, query: string): TreeFilter | null {
   const q = query.trim().toLowerCase();
   if (!q) return null;
-  const areaIds = new Set(lib.areas.map((a) => a.id));
-  // Where each campaign and area sits; an area whose parent is missing shows under its campaign (see areasOf).
-  const parentOf = new Map<Id, Id | null>([
-    ...lib.campaigns.map((c) => [c.id, null] as const),
-    ...lib.areas.map((a) => [a.id, a.parentAreaId && areaIds.has(a.parentAreaId) ? a.parentAreaId : a.campaignId] as const),
-  ]);
-  const matchingNodes = new Set(
-    [...lib.campaigns, ...lib.areas].filter((n) => n.name.toLowerCase().includes(q)).map((n) => n.id),
-  );
-  // The campaigns and areas above an item, nearest first (bounded in case of a parent loop).
+  const areas = lib.areas.filter((a) => a.campaignId === campaignId);
+  const areaIds = new Set(areas.map((a) => a.id));
+  // The area each area sits in; null for top-level areas (and one whose parent is missing; see areasOf).
+  const parentOf = new Map<Id, Id | null>(areas.map((a) => [a.id, a.parentAreaId && areaIds.has(a.parentAreaId) ? a.parentAreaId : null]));
+  const matchingNodes = new Set(areas.filter((n) => n.name.toLowerCase().includes(q)).map((n) => n.id));
+  // The areas above an item, nearest first (bounded in case of a parent loop).
   const above = (parentId: Id | null) => {
     const chain: Id[] = [];
     for (let id = parentId; id !== null && parentOf.has(id) && chain.length < parentOf.size; id = parentOf.get(id)!) chain.push(id);
@@ -151,24 +141,24 @@ export function filterLibrary(lib: Library, query: string): TreeFilter | null {
       visible.add(id);
     }
   };
-  for (const c of lib.campaigns) consider(c.id, null, c.name);
-  for (const a of lib.areas) consider(a.id, parentOf.get(a.id) ?? null, a.name);
-  for (const e of lib.encounters) consider(e.id, e.areaId ?? e.campaignId, e.name);
+  for (const a of areas) consider(a.id, parentOf.get(a.id) ?? null, a.name);
+  for (const e of lib.encounters) {
+    if (e.campaignId === campaignId) consider(e.id, e.areaId && areaIds.has(e.areaId) ? e.areaId : null, e.name);
+  }
   return { visible, opened };
 }
 
 /** Drop target for an encounter. An area target implies its campaign. */
 export type EncounterDestination =
-  | { kind: 'root' }
   | { kind: 'campaign'; campaignId: Id }
   | { kind: 'area'; areaId: Id };
 
-/** Moves an encounter to the root, a campaign, or an area (taking on the area's campaign). */
-export function moveEncounter(lib: Library, encounterId: Id, dest: EncounterDestination): Library {
-  let campaignId: Id | null = null;
+/** Moves an encounter into a campaign, or an area (taking on the area's campaign). */
+export function moveEncounter<L extends EncounterLibrary>(lib: L, encounterId: Id, dest: EncounterDestination): L {
+  let campaignId: Id;
   let areaId: Id | null = null;
   if (dest.kind === 'campaign') campaignId = dest.campaignId;
-  if (dest.kind === 'area') {
+  else {
     const area = lib.areas.find((a) => a.id === dest.areaId);
     if (!area) return lib;
     campaignId = area.campaignId;
@@ -211,17 +201,36 @@ export function moveArea(lib: Library, areaId: Id, dest: AreaDestination): Libra
   };
 }
 
-/** Deleting a campaign deletes everything inside it. */
-export function deleteCampaign(lib: Library, campaignId: Id): Library {
+/** A deleted campaign's areas and encounters go with it. */
+export function deleteCampaignContents<L extends EncounterLibrary>(lib: L, campaignId: Id): L {
   return {
-    campaigns: lib.campaigns.filter((c) => c.id !== campaignId),
+    ...lib,
     areas: lib.areas.filter((a) => a.campaignId !== campaignId),
     encounters: lib.encounters.filter((e) => e.campaignId !== campaignId),
   };
 }
 
+/**
+ * Areas and encounters whose campaign isn't in the list (unfiled encounters
+ * from before every encounter had a campaign, or ones a deleted campaign left
+ * behind) move into `campaignId`, so nothing is out of sight.
+ */
+export function adoptOrphans<L extends EncounterLibrary>(lib: L, campaignIds: Set<Id>, campaignId: Id): L {
+  const orphanAreas = new Set(lib.areas.filter((a) => !campaignIds.has(a.campaignId)).map((a) => a.id));
+  // Unfiled encounters in old saves have a null campaign, which isn't in the list either.
+  const orphan = (e: Encounter) => !campaignIds.has(e.campaignId);
+  if (orphanAreas.size === 0 && !lib.encounters.some(orphan)) return lib;
+  return {
+    ...lib,
+    areas: lib.areas.map((a) => (orphanAreas.has(a.id) ? { ...a, campaignId } : a)),
+    encounters: lib.encounters.map((e) =>
+      orphan(e) ? { ...e, campaignId, areaId: e.areaId && orphanAreas.has(e.areaId) ? e.areaId : null } : e,
+    ),
+  };
+}
+
 /** Deleting an area deletes everything nested in it: areas and encounters. */
-export function deleteArea(lib: Library, areaId: Id): Library {
+export function deleteArea<L extends EncounterLibrary>(lib: L, areaId: Id): L {
   const subtree = subtreeOf(lib, areaId);
   return {
     ...lib,
@@ -231,7 +240,7 @@ export function deleteArea(lib: Library, areaId: Id): Library {
 }
 
 /** Number of areas and encounters nested anywhere inside an area (for delete confirmations). */
-export function areaContents(lib: Library, areaId: Id): { areas: number; encounters: number } {
+export function areaContents(lib: EncounterLibrary, areaId: Id): { areas: number; encounters: number } {
   const subtree = subtreeOf(lib, areaId);
   return {
     areas: subtree.size - 1,
@@ -240,11 +249,11 @@ export function areaContents(lib: Library, areaId: Id): { areas: number; encount
 }
 
 /** Deletes one encounter. */
-export function deleteEncounter(lib: Library, encounterId: Id): Library {
+export function deleteEncounter<L extends EncounterLibrary>(lib: L, encounterId: Id): L {
   return { ...lib, encounters: lib.encounters.filter((e) => e.id !== encounterId) };
 }
 
 /** Encounters that still reference a template; such templates can't be deleted. */
-export function encountersUsingTemplate(lib: Library, templateId: Id): Encounter[] {
+export function encountersUsingTemplate(lib: EncounterLibrary, templateId: Id): Encounter[] {
   return lib.encounters.filter((e) => e.combatants.some((c) => c.templateId === templateId));
 }

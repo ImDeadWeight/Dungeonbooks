@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { CharacterTemplate } from '../characters';
 import { createEmptyStatBlock } from 'campaign-link/formats/dnd5e/statBlock';
 import { addToCombatants } from './combatantFactory';
-import { areaContents, deleteArea, filterLibrary, flattenAreas, moveArea, moveEncounter, normalizeAreas } from './tree';
+import { adoptOrphans, areaContents, deleteArea, deleteCampaignContents, filterCampaign, flattenAreas, moveArea, moveEncounter, normalizeAreas } from './tree';
 import type { Encounter, Library } from './types';
 import { inactiveCombat } from '../combat/types';
 
@@ -60,10 +60,32 @@ describe('tree moves', () => {
   });
 
   it('dropping an encounter on an area sets both parents', () => {
-    const loose = moveEncounter(lib, 'e1', { kind: 'root' });
-    expect(loose.encounters[0]).toMatchObject({ campaignId: null, areaId: null });
+    const loose = moveEncounter(lib, 'e1', { kind: 'campaign', campaignId: 'c2' });
+    expect(loose.encounters[0]).toMatchObject({ campaignId: 'c2', areaId: null });
     const back = moveEncounter(loose, 'e1', { kind: 'area', areaId: 'a1' });
     expect(back.encounters[0]).toMatchObject({ campaignId: 'c1', areaId: 'a1' });
+  });
+
+  it("deleting a campaign's contents leaves other campaigns alone", () => {
+    const withTwo = moveEncounter(lib, 'e1', { kind: 'campaign', campaignId: 'c2' });
+    const left = deleteCampaignContents(withTwo, 'c1');
+    expect(left.areas).toEqual([]);
+    expect(left.encounters.map((e) => e.id)).toEqual(['e1']);
+  });
+
+  it('moves unfiled encounters and areas of missing campaigns into the given campaign', () => {
+    const old = {
+      areas: [{ id: 'a9', name: 'Lost', campaignId: 'gone', parentAreaId: null }],
+      encounters: [
+        { ...lib.encounters[0], id: 'e2', campaignId: null as unknown as string, areaId: null },
+        { ...lib.encounters[0], id: 'e3', campaignId: 'gone', areaId: 'a9' },
+        lib.encounters[0],
+      ],
+    };
+    const adopted = adoptOrphans(old, new Set(['c1', 'c2']), 'c2');
+    expect(adopted.areas[0].campaignId).toBe('c2');
+    expect(adopted.encounters.map((e) => [e.campaignId, e.areaId])).toEqual([['c2', null], ['c2', 'a9'], ['c1', 'a1']]);
+    expect(adoptOrphans(adopted, new Set(['c1', 'c2']), 'c2')).toBe(adopted);
   });
 
   describe('nested areas', () => {
@@ -113,9 +135,9 @@ describe('tree moves', () => {
 });
 
 describe('sidebar search', () => {
-  const encounter = (id: string, name: string, campaignId: string | null, areaId: string | null): Encounter =>
+  const encounter = (id: string, name: string, campaignId: string, areaId: string | null): Encounter =>
     ({ id, name, campaignId, areaId, formatId: 'dnd5e', combatants: [], combat: inactiveCombat() });
-  // One › Mines › Shaft holds "Cave-in"; "Ambush" is loose in One; "Bandits" is unfiled.
+  // One › Mines › Shaft holds "Cave-in"; "Ambush" is loose in One; "Bandits" is in Two.
   const lib: Library = {
     campaigns: [{ id: 'c1', name: 'One', formatId: null }, { id: 'c2', name: 'Two', formatId: null }],
     areas: [
@@ -125,30 +147,30 @@ describe('sidebar search', () => {
     encounters: [
       encounter('cave', 'Cave-in', 'c1', 'shaft'),
       encounter('ambush', 'Ambush', 'c1', null),
-      encounter('bandits', 'Bandits', null, null),
+      encounter('bandits', 'Bandits', 'c2', null),
     ],
   };
-  const visible = (query: string) => [...(filterLibrary(lib, query)?.visible ?? [])].sort();
+  const visible = (query: string, campaignId = 'c1') => [...(filterCampaign(lib, campaignId, query)?.visible ?? [])].sort();
 
   it('is off for a blank search', () => {
-    expect(filterLibrary(lib, ' ')).toBeNull();
+    expect(filterCampaign(lib, 'c1', ' ')).toBeNull();
   });
 
-  it('shows a matching encounter with its areas and campaign, opened', () => {
-    const filter = filterLibrary(lib, 'CAVE')!;
-    expect([...filter.visible].sort()).toEqual(['c1', 'cave', 'mines', 'shaft']);
-    expect([...filter.opened].sort()).toEqual(['c1', 'mines', 'shaft']);
+  it('shows a matching encounter with its areas, opened', () => {
+    const filter = filterCampaign(lib, 'c1', 'CAVE')!;
+    expect([...filter.visible].sort()).toEqual(['cave', 'mines', 'shaft']);
+    expect([...filter.opened].sort()).toEqual(['mines', 'shaft']);
   });
 
   it('shows everything inside a matching area without opening it', () => {
-    const filter = filterLibrary(lib, 'mines')!;
-    expect([...filter.visible].sort()).toEqual(['c1', 'cave', 'mines', 'shaft']);
-    expect([...filter.opened]).toEqual(['c1']);
+    const filter = filterCampaign(lib, 'c1', 'mines')!;
+    expect([...filter.visible].sort()).toEqual(['cave', 'mines', 'shaft']);
+    expect([...filter.opened]).toEqual([]);
   });
 
-  it('finds unfiled encounters and matching campaigns', () => {
-    expect(visible('band')).toEqual(['bandits']);
-    expect(visible('two')).toEqual(['c2']);
+  it("only looks in the open campaign", () => {
+    expect(visible('band')).toEqual([]);
+    expect(visible('band', 'c2')).toEqual(['bandits']);
     expect(visible('zzz')).toEqual([]);
   });
 });

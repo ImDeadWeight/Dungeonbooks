@@ -1,28 +1,20 @@
 /**
  * @file The Encounters strip on a Character page: every encounter in the
- * linked Encounters campaign this character is in (through characters made
- * from this page), whether its combat is running, and how the character is
+ * campaign this character is in (through characters made from this page), whether its combat is running, and how the character is
  * doing in it. Clicking one opens it in Encounters.
  */
 import { areaPath, encountersForLorePage } from 'campaign-link';
 import { Swords } from 'lucide-react';
 import type { Page } from '../../domain/notebook';
 import { openInEncounters } from '../../state/appLinks';
-import { useOpenNotebookCatalog, useOpenNotebookLinkStatus } from '../../state/campaignLink';
+import { useOpenNotebookCatalog } from '../../state/campaignLink';
 import { EncounterStateBadge, statusWords } from './EncounterState';
 
 /** Shown under a Character page's title. */
 export function CharacterEncounters({ page }: { page: Page }) {
-  const status = useOpenNotebookLinkStatus();
   const catalog = useOpenNotebookCatalog();
-
-  if (status !== 'linked' || !catalog) {
-    return (
-      <div className="character-encounters">
-        <span className="muted">Link this notebook to an Encounters campaign (notebook menu) to see the encounters {page.title} is in.</span>
-      </div>
-    );
-  }
+  // Encounters publishes as soon as a campaign opens; until then there's nothing to show.
+  if (!catalog) return null;
 
   const encounters = encountersForLorePage(catalog, page.id);
   // Characters made from this page (to report how their combatants are doing).

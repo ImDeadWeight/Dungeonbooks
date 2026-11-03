@@ -1,23 +1,18 @@
 /**
- * @file Connects the stores to their files: library.json (which notebooks
- * exist, which is open), one notebook-<id>.json per notebook, and view.json
- * (each notebook's collapsed folders). Loads them at startup, then saves
- * shortly after each change.
+ * @file Connects the stores to their files: one notebook-<campaign id>.json
+ * per campaign (its notes) and view.json (each notebook's collapsed folders).
+ * Loads the open campaign's notebook at startup, then saves shortly after each
+ * change. A campaign with no notebook file yet has empty notes.
  */
-import { newId, type Id } from '../domain/ids';
-import { DEFAULT_NOTEBOOK_NAME, emptyLibrary, type Library } from '../domain/library';
+import { useCampaigns } from '../../campaigns/campaignStore';
+import type { Id } from '../domain/ids';
 import { emptyNotebook, type Notebook } from '../domain/notebook';
-import { hasDocument, loadDocument, removeDocument, saveDocument } from '../storage/documents';
-import { useLibrary } from './libraryStore';
+import { loadDocument, removeDocument, saveDocument } from '../storage/documents';
 import { useNotebook } from './notebookStore';
 import { useUi } from './uiStore';
 
 /** Wait this long after the last change before writing, so typing saves once per pause. */
 const SAVE_DELAY_MS = 500;
-/** The library's document. */
-const LIBRARY = 'library';
-/** The single notebook saved before there were several; adopted on first start. */
-const LEGACY_NOTEBOOK = 'notebook';
 /** How each notebook was last shown; kept apart from the notebooks so exports don't carry it. */
 const VIEW = 'view';
 
@@ -26,15 +21,15 @@ interface NotebookView {
   collapsedFolders: Id[];
 }
 
-/** Every notebook's view, by notebook id. */
+/** Every notebook's view, by campaign id. */
 let views: Record<Id, NotebookView> = {};
 /** Pending save of view.json. */
 let viewTimer: ReturnType<typeof setTimeout> | undefined;
 
-/** A notebook's document name. */
+/** A campaign's notebook document name. */
 const notebookDoc = (id: Id) => `notebook-${id}`;
 
-/** The notebook whose contents are in the notebook store (where its edits get saved). */
+/** The campaign whose notes are in the notebook store (where its edits get saved). */
 let openId: Id | null = null;
 /** Pending save of the open notebook. */
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -51,17 +46,17 @@ function serially<T>(task: () => Promise<T>): Promise<T> {
 
 const notify = (what: string) => (err: unknown) => useUi.getState().notifyError(`${what}: ${(err as Error).message}`);
 
-/** Saves a notebook's contents to its file. */
+/** Saves a campaign's notes to its file. */
 export function writeNotebook(id: Id, notebook: Notebook): Promise<void> {
   return serially(() => saveDocument(notebookDoc(id), notebook));
 }
 
-/** Deletes a notebook's file. */
+/** Deletes a campaign's notes file. */
 export function deleteNotebookFile(id: Id): Promise<void> {
   return serially(() => removeDocument(notebookDoc(id)));
 }
 
-/** Reads a notebook's contents from its file (empty if it has none). */
+/** Reads a campaign's notes from its file (empty if it has none). */
 export async function readNotebook(id: Id): Promise<Notebook> {
   const loaded = await loadDocument(notebookDoc(id), emptyNotebook);
   if (loaded.warning) useUi.getState().notifyError(loaded.warning);
@@ -78,8 +73,8 @@ export function saveOpenNotebook(): Promise<void> {
 }
 
 /**
- * Makes a notebook the open one: saves the current one's pending edits first
- * (and stays put if that fails), then loads the other into the store.
+ * Loads a campaign's notes into the store: saves the current notes' pending
+ * edits first (and rejects, leaving them open, if that fails).
  */
 export async function openNotebook(id: Id): Promise<void> {
   if (timer !== undefined) await saveOpenNotebook();
@@ -93,7 +88,6 @@ export async function openNotebook(id: Id): Promise<void> {
   }
   const collapsed = Object.fromEntries((views[id]?.collapsedFolders ?? []).map((folderId) => [folderId, true]));
   useUi.getState().resetForNotebook(collapsed);
-  useLibrary.getState().setActive(id);
 }
 
 /** Saves view.json now (cancelling the pending save). */
@@ -113,48 +107,24 @@ function rememberView(collapsedFolders: Record<Id, boolean>) {
   viewTimer = setTimeout(() => saveViews().catch(notify('Could not save which folders are open')), SAVE_DELAY_MS);
 }
 
-/** Forgets a deleted notebook's view. */
+/** Forgets a deleted campaign's view. */
 export function forgetView(id: Id): Promise<void> {
   const { [id]: _gone, ...rest } = views;
   views = rest;
   return saveViews();
 }
 
-/**
- * The library on first start: the notebook saved before there were several,
- * if there is one (its old file stays as a backup), else an empty notebook.
- */
-async function firstLibrary(): Promise<Library> {
-  const id = newId();
-  const legacy = (await hasDocument(LEGACY_NOTEBOOK)) ? await loadDocument(LEGACY_NOTEBOOK, emptyNotebook) : null;
-  if (legacy?.warning) useUi.getState().notifyError(legacy.warning);
-  await writeNotebook(id, legacy?.data ?? emptyNotebook());
-  return { notebooks: [{ id, name: DEFAULT_NOTEBOOK_NAME }], activeId: id };
-}
-
-/** Loads the library and the open notebook, then saves each whenever it changes. */
+/** Loads the open campaign's notes, then saves them (and the view) whenever they change. Load after the campaign list. */
 export async function startPersistence(): Promise<void> {
-  const loaded = await loadDocument(LIBRARY, emptyLibrary);
-  if (loaded.warning) useUi.getState().notifyError(loaded.warning);
-  let library = loaded.data;
-  if (library.notebooks.length === 0) {
-    library = await firstLibrary();
-    await serially(() => saveDocument(LIBRARY, library));
-  }
-  useLibrary.getState().replaceAll(library);
   const view = await loadDocument<Record<Id, NotebookView>>(VIEW, () => ({}));
   if (view.warning) useUi.getState().notifyError(view.warning);
   views = view.data;
-  const active = library.notebooks.find((n) => n.id === library.activeId) ?? library.notebooks[0];
-  await openNotebook(active.id);
+  await openNotebook(useCampaigns.getState().activeId!);
 
   useNotebook.subscribe(() => {
     if (swapping) return;
     clearTimeout(timer);
     timer = setTimeout(() => saveOpenNotebook().catch(notify('Could not save notebook')), SAVE_DELAY_MS);
-  });
-  useLibrary.subscribe(({ notebooks, activeId }) => {
-    serially(() => saveDocument(LIBRARY, { notebooks, activeId })).catch(notify('Could not save the notebook list'));
   });
   useUi.subscribe((ui, before) => {
     if (ui.collapsedFolders !== before.collapsedFolders) rememberView(ui.collapsedFolders);

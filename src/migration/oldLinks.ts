@@ -3,7 +3,12 @@
  * (campaign-link.json): a campaign and a notebook were linked when each
  * claimed the other.
  */
-import type { LinkTable } from '../bridge/links';
+
+/** Where the copied links are kept until the campaign lists are made one (see unifyCampaigns.ts). */
+export const OLD_LINKS_DOC = 'links';
+
+/** Campaign id → notebook id. */
+export type LinkTable = Record<string, string>;
 
 /** A saved claim, as campaign-link.json holds it (only the part needed here). */
 interface OldClaim {

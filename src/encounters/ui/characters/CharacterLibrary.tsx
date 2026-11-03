@@ -13,7 +13,7 @@ import { useLibrary } from '../../state/libraryStore';
 import { exportItems } from '../../state/transferActions';
 import { useUi } from '../../state/uiStore';
 import { confirmThen } from '../common/ConfirmDialog';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { closeUnlessDirty } from '../common/unsavedChanges';
 import { CharacterEditor } from './CharacterEditor';
 import { CharacterFilterBar } from './CharacterFilterBar';

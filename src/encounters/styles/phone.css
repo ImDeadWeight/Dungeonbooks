@@ -45,11 +45,20 @@
     display: none;
   }
 
-  /* Top bar: icons only, so every button fits. */
+  /* Top bar: icons only, close together, so every button fits. The campaign list marks the open campaign. */
+  .top-bar {
+    gap: 6px;
+  }
+
+  .top-bar .campaign-current .campaign-name,
+  .top-bar .campaign-current .lucide-chevron-down {
+    display: none;
+  }
+
   .top-bar > button {
     font-size: 0;
     gap: 0;
-    padding: 6px 10px;
+    padding: 6px 8px;
   }
 }
 

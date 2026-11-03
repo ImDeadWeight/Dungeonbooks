@@ -2,7 +2,7 @@
  * @file Are-you-sure dialog for destructive actions, and a helper to open it.
  */
 import { useUi } from '../../state/uiStore';
-import { Modal } from './Modal';
+import { Modal } from '../../../ui/Modal';
 
 /** Props for ConfirmDialog. */
 interface Props {

@@ -1,12 +1,13 @@
 /**
- * @file The top application bar: the tab switch, then Create (+), Import,
- * Backup, Characters and Conditions buttons. On desktop it is also the window
+ * @file The top application bar: the tab switch, the campaign menu, then
+ * Create (+), Import, Backup, Characters and Conditions buttons. On desktop it is also the window
  * title bar.
  */
 import { Download, Plus, Upload, Users } from 'lucide-react';
 import { hasCustomTitleBar } from '../../platform';
 import { exportItems, startImport } from '../state/transferActions';
 import { useUi } from '../state/uiStore';
+import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
 import { WindowControls } from '../../shell/WindowControls';
 import { HealingIcon } from './common/HealingIcon';
@@ -25,6 +26,7 @@ export function TopBar() {
   return (
     <header className={`top-bar${customTitleBar ? ' title-bar' : ''}`} {...drag}>
       <TabSwitcher />
+      <CampaignMenu />
       <button className="primary" title="Create…" onClick={() => openModal({ type: 'create', preset: { kind: null } })}>
         <Plus size={20} />
       </button>

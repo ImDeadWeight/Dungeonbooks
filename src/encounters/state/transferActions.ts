@@ -3,6 +3,8 @@
  * data, runs the pure export/import logic, uses the platform file dialogs,
  * commits imports to the stores, and reports results as notices.
  */
+import { useCampaigns } from '../../campaigns/campaignStore';
+import { mergeImportedCampaigns } from '../../campaigns/lifecycle';
 import { applyImport, type Placement } from '../domain/transfer/applyImport';
 import * as exporters from '../domain/transfer/exportBundle';
 import { parseTransferFile } from '../domain/transfer/parseFile';
@@ -15,9 +17,10 @@ import { useCombatHistory } from './combatStore';
 import { useLibrary } from './libraryStore';
 import { useUi } from './uiStore';
 
-/** A snapshot of everything in the library and character stores. */
-function currentAppData(): AppData {
-  const { campaigns, areas, encounters } = useLibrary.getState();
+/** A snapshot of the campaigns and everything in the library and character stores. */
+export function currentAppData(): AppData {
+  const { campaigns } = useCampaigns.getState();
+  const { areas, encounters } = useLibrary.getState();
   const { templates, tags, customConditions } = useCharacters.getState();
   return { campaigns, areas, encounters, templates, tags, customConditions };
 }
@@ -84,7 +87,9 @@ export function commitImport(file: TransferFile, plan: ImportPlan, resolutions: 
   const ui = useUi.getState();
   try {
     const { data, summary } = applyImport(currentAppData(), file, plan, resolutions, placement);
-    useLibrary.getState().replaceAll({ campaigns: data.campaigns, areas: data.areas, encounters: data.encounters });
+    // Campaigns first, so the imported areas and encounters never point at a campaign the list doesn't have.
+    mergeImportedCampaigns(data.campaigns);
+    useLibrary.getState().replaceAll({ areas: data.areas, encounters: data.encounters });
     useCharacters.getState().replaceAll({ templates: data.templates, tags: data.tags, customConditions: data.customConditions });
     // Undo history for overwritten encounters would restore pre-import state; drop it.
     for (const item of plan.items) {

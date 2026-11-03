@@ -2,14 +2,18 @@
 
 # Dungeon Books
 
-Encounters and Lorekeeper in one app. The **Encounters** tab is the encounter builder and initiative tracker; the
-**Lorekeeper** tab is the hyperlinked campaign notebook. The switch at the start of the top bar moves between them,
-and each tab stays as you left it.
+Encounters and Lorekeeper in one app. Each **campaign** has both: its areas and encounters in the **Encounters** tab
+(the encounter builder and initiative tracker) and its notes in the **Lorekeeper** tab (the hyperlinked notebook). The
+switch at the start of the top bar moves between the tabs, and each tab stays as you left it.
 
-Linking works as it did between the two apps, without the shared folder: link a campaign to a notebook (from the
-campaign's editor, or the notebook menu) and the Encounters tab suggests the notebook's Character pages, while the
-Lorekeeper tab shows the campaign's encounters, their combat state, and characters' stat blocks. Changes show in the
-other tab right away. Open in Lorekeeper / Open in Encounters switch tabs and open the page, encounter or character.
+The campaign menu next to it shows the open campaign; its list switches campaigns, renames one (double-click or the
+pencil), opens a campaign's settings (name, default format, export its encounters or its notes, delete it), and makes
+a new one. Both tabs always show the same campaign. The Encounters tab suggests the notes' Character pages when naming
+characters, and the Lorekeeper tab shows the campaign's encounters, their combat state, and characters' stat blocks;
+changes show in the other tab right away. Open in Lorekeeper / Open in Encounters switch tabs and open the page,
+encounter or character (and its campaign, if another one is open).
+
+The character library and custom conditions are shared by every campaign.
 
 Built with Tauri 2 + React + TypeScript, from the Encounters and Lorekeeper code; the shared game formats and catalogue
 formats still come from the [campaign-link](https://github.com/ImDeadWeight/campaign-link) package.
@@ -49,13 +53,15 @@ The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the a
 
 ## Code layout
 
-- `src/encounters/`, `src/lorekeeper/`: each app's domain, state, storage and UI, as in the separate apps.
-- `src/bridge/`: what the tabs share: which campaign is linked to which notebook (`links.ts`), each side's catalogue
-  of linked campaigns and notebooks (`catalogs.ts`, the same catalogues the apps used to write to the shared folder),
-  and the showing tab plus opening things in the other one (`navigation.ts`).
-- `src/shell/`: the window: both tabs, the tab switch, window controls.
+- `src/campaigns/`: the campaign list and which campaign is open (`campaignStore.ts`), and creating, opening,
+  renaming and deleting campaigns (`lifecycle.ts`), which each tab joins in through its `state/campaignParticipant.ts`.
+- `src/encounters/`, `src/lorekeeper/`: each app's domain, state, storage and UI, from the separate apps.
+- `src/bridge/`: what the tabs share: each side's catalogue of the campaigns (`catalogs.ts`, the same catalogues the
+  apps used to write to the shared folder), and the showing tab plus opening things in the other one (`navigation.ts`).
+- `src/shell/`: the window: both tabs, the tab switch, the campaign menu and dialog, window controls.
+- `src/ui/`: components both tabs use (the dialog frame).
 - `src/storage/`: saving JSON documents; each tab keeps its own folder.
-- `src/migration/`: the first-start copy of the old apps' data.
+- `src/migration/`: the first-start copy of the old apps' data, and turning their two lists into one campaign list.
 - `build/scopeTabCss.ts`: the two apps' stylesheets reuse class names, so every rule is prefixed with the tab it
   belongs to (`:root[data-tab="encounters"] …`) and only the showing tab's styles apply.
 
@@ -63,16 +69,24 @@ The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the a
 
 Saved as JSON under `%APPDATA%\com.dungeonbooks.app\data\`:
 
-- `encounters\`: `library.json`, `characters.json`, `conditions.json` (as in Encounters).
-- `lorekeeper\`: `library.json`, `notebook-<id>.json`, `view.json` (as in Lorekeeper).
-- `shared\`: `links.json` (campaign ↔ notebook), `view.json` (which tab was showing), `copied-from-old-apps.json`.
+- `shared\`: `campaigns.json` (every campaign's name and default format, and which is open), `view.json` (which tab
+  was showing), `copied-from-old-apps.json`.
+- `encounters\`: `library.json` (every campaign's areas and encounters), `characters.json`, `conditions.json`.
+- `lorekeeper\`: `notebook-<campaign id>.json` (a campaign's notes), `view.json` (folded folders per campaign).
+
+Before there was one campaign list, Encounters' campaigns and Lorekeeper's notebooks were separate lists with links
+between them. The first start that finds no `campaigns.json` makes the one list: a linked campaign and notebook become
+one campaign (the campaign's id and name; its notes move to that id, and characters made from them follow), an
+unlinked campaign gets empty notes, and an unlinked notebook becomes a campaign with no encounters yet. Encounters
+that weren't in any campaign (and anything whose campaign is gone) go into the open campaign.
 
 **Coming from the separate apps:** on Windows, the first start copies Encounters' and Lorekeeper's data
-(`%APPDATA%\com.encounters.app\data` and `%APPDATA%\com.lorekeeper.app\data`) and the links between them. Ids are kept,
-so characters still point at their pages. The old folders are only read, so the separate apps keep working with their
+(`%APPDATA%\com.encounters.app\data` and `%APPDATA%\com.lorekeeper.app\data`) and the links between them, then makes
+the one campaign list as above. Characters still point at their pages. The old folders are only read, so the separate apps keep working with their
 own copies; changes in one place don't reach the other. The copy happens once (`shared\copied-from-old-apps.json`
 records it) and never over data made here. To copy again, close the app and delete `%APPDATA%\com.dungeonbooks.app`.
 
-On Android, apps can't read each other's files, so bring data over with each tab's Import (an Encounters backup, an
-exported notebook) and link the campaign to its notebook again. An imported notebook gets a new id; once it's
-linked, characters made from its pages find them again (by page id) on their own.
+On Android, apps can't read each other's files, so bring data over with each tab's Import: an Encounters backup first
+(its campaigns join the list), then, with a campaign open, its exported notebook (the Lorekeeper tab's Import fills the
+open campaign's notes when it has none yet, and otherwise adds the notes as a new campaign). Characters made from the
+notebook's pages find them again (by page id) on their own.

@@ -8,14 +8,13 @@
  * Android keeps each app's files private, so there the old data comes over
  * with each tab's Import instead.
  */
-import { writeLinks } from '../bridge/links';
 import { sharedDocuments } from '../bridge/sharedDocuments';
 import { ENCOUNTERS_FOLDER } from '../encounters/storage/documents';
 import { LOREKEEPER_FOLDER } from '../lorekeeper/storage/documents';
 import { isMobile, isTauri } from '../platform';
 import { createDocuments, type Documents } from '../storage/documents';
 import { envelopeData, OLD_APPS, readOldDocument } from './oldAppFiles';
-import { linksFromClaims, type OldClaims } from './oldLinks';
+import { linksFromClaims, OLD_LINKS_DOC, type OldClaims } from './oldLinks';
 
 /** Shared document recording that the copy was done (or wasn't needed), so it never runs twice. */
 const MARKER_DOC = 'copied-from-old-apps';
@@ -73,7 +72,7 @@ export async function copyOldApps(): Promise<string | null> {
   if (copiedEncounters.length > 0 && copiedLorekeeper.length > 0) {
     const links = linksFromClaims(await oldClaims('encounters'), await oldClaims('lorekeeper'));
     linkCount = Object.keys(links).length;
-    await writeLinks(links);
+    await sharedDocuments.saveDocument(OLD_LINKS_DOC, { notebookByCampaign: links });
   }
 
   await sharedDocuments.saveDocument(MARKER_DOC, {

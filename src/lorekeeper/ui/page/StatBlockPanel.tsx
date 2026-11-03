@@ -2,8 +2,8 @@
  * @file A Character page's stat block: the Stat block button in the page's
  * info bar, and the panel it opens beside the page. The panel shows the stat
  * block (the same views and editors as Encounters), edits it, starts one in a
- * chosen game system, and, when the notebook is linked, offers the stat block
- * of the Encounters character made from this page when it differs.
+ * chosen game system, and offers the stat block of an Encounters character
+ * made from this page when it differs.
  */
 import { sameStatBlock, type LinkCharacter, type SharedStatBlock } from 'campaign-link';
 import type { FormatId } from 'campaign-link/formats/formatIds';
@@ -116,7 +116,7 @@ function FormatPicker({ value, onChange }: { value: FormatId | ''; onChange(form
   );
 }
 
-/** Starts a blank stat block in a chosen system (the linked campaign's, to begin with). */
+/** Starts a blank stat block in a chosen system (the campaign's default, to begin with). */
 function NewStatBlock({ onCreate }: { onCreate(statBlock: SharedStatBlock): void }) {
   const campaignFormat = useOpenNotebookCatalog()?.formatId;
   const [formatId, setFormatId] = useState<FormatId | ''>(campaignFormat ?? '');

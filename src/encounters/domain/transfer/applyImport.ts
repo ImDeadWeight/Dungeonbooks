@@ -10,11 +10,11 @@ import { newId, type Id } from '../ids';
 import { normalizeAreas } from '../library/tree';
 import type { Area, Campaign, Encounter } from '../library/types';
 import { copiedItems, itemKey, type ImportPlan, type ItemType, type Resolution } from './plan';
-import type { AppData, TransferFile } from './types';
+import type { AppData, BundleEncounter, TransferFile } from './types';
 
-/** Where the user chose to put an imported area or encounter. */
+/** Where the user chose to put an imported area or encounter (see ImportPlan.placement). */
 export interface Placement {
-  campaignId: Id | null;
+  campaignId: Id;
   areaId: Id | null;
 }
 
@@ -119,28 +119,27 @@ export function applyImport(
   const areas = normalizeAreas(
     merge<Area>(state.areas, 'area', b.areas, (a) => {
       const campaignId = bundleCampaignIds.has(a.campaignId) ? finalId('campaign', a.campaignId) : placement.campaignId;
-      if (!campaignId) throw new Error('An imported area needs a campaign to go into.');
       const parentAreaId = a.parentAreaId && bundleAreaIds.has(a.parentAreaId) ? finalId('area', a.parentAreaId) : null;
       return { ...a, campaignId, parentAreaId };
     }),
   );
 
   // parentsOf(): an imported encounter's final campaign/area — its imported parent
-  // if that came in the same file, the user's placement for a single encounter,
-  // otherwise unfiled.
-  const parentsOf = (e: Encounter): Placement => {
+  // if that came in the same file, otherwise the user's placement (an area only
+  // for a single encounter).
+  const parentsOf = (e: BundleEncounter): Placement => {
     if (e.areaId && bundleAreaIds.has(e.areaId)) {
       const areaId = finalId('area', e.areaId);
-      return { areaId, campaignId: areas.find((a) => a.id === areaId)?.campaignId ?? null };
+      return { areaId, campaignId: areas.find((a) => a.id === areaId)?.campaignId ?? placement.campaignId };
     }
     if (e.campaignId && bundleCampaignIds.has(e.campaignId)) return { campaignId: finalId('campaign', e.campaignId), areaId: null };
     if (file.kind === 'encounter') return placement;
-    return { campaignId: null, areaId: null };
+    return { campaignId: placement.campaignId, areaId: null };
   };
 
-  const encounters = merge<Encounter>(state.encounters, 'encounter', b.encounters, (e) => ({
+  const placed: Encounter[] = b.encounters.map((e) => ({ ...e, ...parentsOf(e) }));
+  const encounters = merge<Encounter>(state.encounters, 'encounter', placed, (e) => ({
     ...e,
-    ...parentsOf(e),
     combatants: e.combatants.map((c) => ({
       ...c,
       templateId: finalId('character', c.templateId),

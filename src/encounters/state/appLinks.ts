@@ -4,6 +4,7 @@
  */
 import type { LinkTarget } from 'campaign-link';
 import { openTarget, registerOpener } from '../../bridge/navigation';
+import { switchCampaign } from '../../campaigns/lifecycle';
 import type { LoreRef } from '../domain/characters';
 import { useCharacters } from './characterStore';
 import { useLibrary } from './libraryStore';
@@ -14,12 +15,13 @@ export function openInLorekeeper(lore: LoreRef): void {
   openTarget({ app: 'lorekeeper', kind: 'page', notebookId: lore.notebookId, pageId: lore.pageId });
 }
 
-/** Shows the encounter or character a link points at. */
-function handle(target: LinkTarget) {
+/** Shows the encounter (opening its campaign if needed) or character a link points at. */
+async function handle(target: LinkTarget) {
   const ui = useUi.getState();
   if (target.kind === 'encounter') {
-    if (useLibrary.getState().encounters.some((e) => e.id === target.encounterId)) ui.selectEncounter(target.encounterId);
-    else ui.notify('error', 'That encounter no longer exists.');
+    const encounter = useLibrary.getState().encounters.find((e) => e.id === target.encounterId);
+    if (!encounter) ui.notify('error', 'That encounter no longer exists.');
+    else if (await switchCampaign(encounter.campaignId)) ui.selectEncounter(encounter.id);
   } else if (target.kind === 'character') {
     if (useCharacters.getState().templates.some((t) => t.id === target.characterId)) {
       ui.openModal({ type: 'editCharacter', templateId: target.characterId });
@@ -29,5 +31,7 @@ function handle(target: LinkTarget) {
 
 /** Lets the Lorekeeper tab open encounters and characters here. */
 export function startAppLinks(): void {
-  registerOpener('encounters', handle);
+  registerOpener('encounters', (target) => {
+    handle(target);
+  });
 }

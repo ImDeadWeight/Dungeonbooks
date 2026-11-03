@@ -8,7 +8,7 @@ import type { FormatId } from 'campaign-link/formats/formatIds';
 import { getFormat } from 'campaign-link/formats/registry';
 import { sameContent } from '../../domain/transfer/plan';
 import { conditionNameTaken, useCharacters } from '../../state/characterStore';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { closeUnlessDirty } from '../common/unsavedChanges';
 import { ConditionFields, emptyConditionValues, type ConditionValues } from '../conditions/ConditionFields';
 

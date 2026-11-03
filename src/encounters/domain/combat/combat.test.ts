@@ -46,7 +46,7 @@ function combatant(id: string, templateId: string, hp: number | null, order: num
 
 /** An encounter outside combat containing these combatants. */
 function encounter(...cs: Combatant[]): Encounter {
-  return { id: 'e', name: 'E', campaignId: null, areaId: null, formatId: 'dnd5e', combatants: cs, combat: inactiveCombat() };
+  return { id: 'e', name: 'E', campaignId: 'c', areaId: null, formatId: 'dnd5e', combatants: cs, combat: inactiveCombat() };
 }
 
 /** Starts combat with fixed initiatives: first argument acts first. */

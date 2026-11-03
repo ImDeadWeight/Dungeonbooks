@@ -25,7 +25,11 @@ export interface PlanItem {
 /** Everything the import preview shows. */
 export interface ImportPlan {
   items: PlanItem[];
-  /** area exports need a campaign to go into; encounter exports may be placed anywhere. */
+  /**
+   * Where imported things without a parent in the file go: area exports (and
+   * unfiled encounters in old backups) into a campaign; an encounter export
+   * into a campaign, optionally inside an area.
+   */
   placement: 'campaign-required' | 'optional' | 'none';
 }
 
@@ -66,7 +70,8 @@ export function planImport(file: TransferFile, state: AppData): ImportPlan {
     ...b.templates.map((x) => ({ type: 'character' as const, x, status: statusOf(x, state.templates) })),
   ].map(({ type, x, status }) => ({ key: itemKey(type, x.id), type, id: x.id, name: x.name, status }));
 
-  const placement = file.kind === 'area' ? 'campaign-required' : file.kind === 'encounter' ? 'optional' : 'none';
+  const unfiled = b.encounters.some((e) => e.campaignId === null);
+  const placement = file.kind === 'encounter' ? 'optional' : file.kind === 'area' || unfiled ? 'campaign-required' : 'none';
   return { items, placement };
 }
 

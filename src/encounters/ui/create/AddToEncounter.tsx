@@ -9,7 +9,7 @@ import { useCharacters } from '../../state/characterStore';
 import { runCombatAction } from '../../state/combatStore';
 import { useEncounter } from '../../state/libraryStore';
 import { useUi } from '../../state/uiStore';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { closeUnlessDirty } from '../common/unsavedChanges';
 import { CartBuilder } from './CartBuilder';
 import { useCart } from './useCart';

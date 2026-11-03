@@ -7,7 +7,7 @@ import type { FormatId } from 'campaign-link/formats/formatIds';
 import { addToCombatants } from '../../domain/library/combatantFactory';
 import type { Id } from '../../domain/ids';
 import { useCharacters } from '../../state/characterStore';
-import { useLibrary } from '../../state/libraryStore';
+import { campaignFormat, useLibrary } from '../../state/libraryStore';
 import { useUi } from '../../state/uiStore';
 import { FormatField } from '../common/FormatField';
 import { useReportDirty } from '../common/unsavedChanges';
@@ -17,14 +17,9 @@ import { useCart } from './useCart';
 
 /** Initial campaign/area (pre-filled by inline + buttons). */
 interface Props {
-  campaignId: Id | null;
+  campaignId: Id;
   areaId: Id | null;
   onDirtyChange(dirty: boolean): void;
-}
-
-/** The default format of a campaign, or '' for none. */
-function campaignFormat(campaignId: Id | null): FormatId | '' {
-  return useLibrary.getState().campaigns.find((c) => c.id === campaignId)?.formatId ?? '';
 }
 
 /** Builds a new encounter from the cart and selects it. */
@@ -32,7 +27,7 @@ export function EncounterForm(props: Props) {
   const [name, setName] = useState('');
   const [parents, setParents] = useState({ campaignId: props.campaignId, areaId: props.areaId });
   // Starts as the campaign's format; follows the campaign until picked by hand.
-  const [initialFormat] = useState(() => campaignFormat(props.campaignId));
+  const [initialFormat] = useState<FormatId | ''>(() => campaignFormat(props.campaignId) ?? '');
   const [formatId, setFormatId] = useState<FormatId | ''>(initialFormat);
   const [formatPicked, setFormatPicked] = useState(false);
   const cart = useCart();
@@ -72,7 +67,7 @@ export function EncounterForm(props: Props) {
           Encounter name
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         </label>
-        <ParentPicker {...parents} requireCampaign={false} showArea onChange={changeParents} />
+        <ParentPicker {...parents} showArea onChange={changeParents} />
         <FormatField
           value={formatId}
           title="The game system for this encounter; only its characters can be added"

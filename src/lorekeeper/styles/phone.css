@@ -23,18 +23,9 @@
     display: none;
   }
 
-  .notebook-current {
-    /* Leaves room for the tab switch and Import. */
-    max-width: calc(100vw - 170px);
-  }
-
   /* Import shrinks to its icon. */
   .top-bar .top-bar-label {
     display: none;
-  }
-
-  .notebook-dropdown {
-    width: min(340px, calc(100vw - 24px));
   }
 
   .page-header {

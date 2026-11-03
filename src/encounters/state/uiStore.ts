@@ -10,7 +10,7 @@ import type { TransferFile } from '../domain/transfer/types';
 import { isPhoneLayout } from '../../platform';
 
 /** Things the Create screen can make. */
-export type CreateKind = 'campaign' | 'area' | 'encounter' | 'character';
+export type CreateKind = 'area' | 'encounter' | 'character';
 
 /** What the Create screen opens with; inline plus buttons pre-fill parents. */
 export interface CreatePreset {
@@ -30,7 +30,7 @@ export type Modal =
   | { type: 'editCondition'; conditionId: Id | null }
   | { type: 'editCharacter'; templateId: Id | null; defaultFormatId?: FormatId | null }
   | { type: 'addToEncounter'; encounterId: Id }
-  | { type: 'editTreeItem'; kind: 'campaign' | 'area' | 'encounter'; id: Id }
+  | { type: 'editTreeItem'; kind: 'area' | 'encounter'; id: Id }
   | { type: 'importPreview'; file: TransferFile }
   | { type: 'confirm'; title?: string; message: string; confirmLabel: string; cancelLabel?: string; onConfirm: () => void };
 

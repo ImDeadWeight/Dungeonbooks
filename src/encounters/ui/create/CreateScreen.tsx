@@ -1,20 +1,20 @@
 /**
- * @file The single Create dialog: pick what to create (campaign, area,
- * encounter, character) and fill in its form.
+ * @file The single Create dialog: pick what to create (area, encounter,
+ * character) and fill in its form. Campaigns are made from the campaign menu.
  */
 import { useState } from 'react';
+import { activeCampaignId } from '../../../campaigns/campaignStore';
 import { useCampaignFormat } from '../../state/libraryStore';
 import { useUi, type CreateKind, type CreatePreset } from '../../state/uiStore';
 import { CharacterEditor } from '../characters/CharacterEditor';
-import { Modal } from '../common/Modal';
+import { Modal } from '../../../ui/Modal';
 import { closeUnlessDirty } from '../common/unsavedChanges';
 import { EncounterForm } from './EncounterForm';
-import { AreaForm, CampaignForm } from './SimpleForms';
+import { AreaForm } from './SimpleForms';
 import './create.css';
 
 /** Button labels for each kind. */
 const KIND_LABELS: Record<CreateKind, string> = {
-  campaign: 'Campaign',
   area: 'Area',
   encounter: 'Encounter',
   character: 'Character',
@@ -30,7 +30,8 @@ export function CreateScreen({ preset }: { preset: CreatePreset }) {
   const closeModal = useUi((s) => s.closeModal);
   const kinds = preset.allowedKinds ?? ALL_KINDS;
   const [kind, setKind] = useState<CreateKind | null>(preset.kind);
-  const campaignId = preset.campaignId ?? null;
+  // Into the open campaign unless an inline + said otherwise.
+  const [campaignId] = useState(() => preset.campaignId ?? activeCampaignId());
   const defaultFormatId = useCampaignFormat(campaignId);
   // Whether the open form has unsaved input; each form reports it.
   const [dirty, setDirty] = useState(false);
@@ -46,7 +47,6 @@ export function CreateScreen({ preset }: { preset: CreatePreset }) {
             </button>
           ))}
         </div>
-        {kind === 'campaign' && <CampaignForm onDirtyChange={setDirty} />}
         {kind === 'area' && <AreaForm campaignId={campaignId} parentAreaId={preset.areaId ?? null} onDirtyChange={setDirty} />}
         {kind === 'encounter' && <EncounterForm campaignId={campaignId} areaId={preset.areaId ?? null} onDirtyChange={setDirty} />}
         {kind === 'character' && <CharacterEditor templateId={null} defaultFormatId={defaultFormatId} onDone={closeModal} onDirtyChange={setDirty} />}

@@ -3,7 +3,7 @@
  * holds a pending confirmation).
  */
 import { useUi } from '../../state/uiStore';
-import { Modal } from './Modal';
+import { Modal } from '../../../ui/Modal';
 
 /** Cancel / confirm dialog; the confirm button is red. */
 export function ConfirmDialog() {
