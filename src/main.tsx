@@ -9,6 +9,7 @@ import { startLinks } from './bridge/links';
 import { startTabs, useTabs } from './bridge/navigation';
 import { startAppLinks as startEncountersLinks } from './encounters/state/appLinks';
 import { startCampaignLink as publishEncounters } from './encounters/state/campaignLink';
+import { startLoreRepair } from './encounters/state/loreRepair';
 import { startPersistence as loadEncounters } from './encounters/state/persistence';
 import { useUi as useEncountersUi } from './encounters/state/uiStore';
 import { startAppLinks as startLorekeeperLinks } from './lorekeeper/state/appLinks';
@@ -48,6 +49,7 @@ load()
     if (copied) useEncountersUi.getState().notify('info', copied);
     publishEncounters();
     publishLorekeeper();
+    startLoreRepair();
     startEncountersLinks();
     startLorekeeperLinks();
   })

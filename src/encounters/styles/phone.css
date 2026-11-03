@@ -46,10 +46,6 @@
   }
 
   /* Top bar: icons only, so every button fits. */
-  .top-bar .brand {
-    display: none;
-  }
-
   .top-bar > button {
     font-size: 0;
     gap: 0;

@@ -4,7 +4,7 @@
  * when the Encounters tab asks for one.
  */
 import type { LinkTarget } from 'campaign-link';
-import { openTarget, registerOpener } from '../../bridge/navigation';
+import { openTarget, registerOpener, useTabs } from '../../bridge/navigation';
 import { useLibrary } from './libraryStore';
 import { useNotebook } from './notebookStore';
 import { switchNotebook } from './notebooks';
@@ -29,9 +29,13 @@ async function handle(target: LinkTarget) {
   else ui.notifyError('That page no longer exists.');
 }
 
-/** Lets the Encounters tab open pages here. */
+/** Lets the Encounters tab open pages here; closes the peek when this tab is hidden. */
 export function startAppLinks(): void {
   registerOpener('lorekeeper', (target) => {
     handle(target);
+  });
+  // The peek listens for Escape on the whole window; a hidden one would close from the other tab's keys.
+  useTabs.subscribe((s, before) => {
+    if (before.tab === 'lorekeeper' && s.tab !== 'lorekeeper') useUi.getState().closePeek();
   });
 }

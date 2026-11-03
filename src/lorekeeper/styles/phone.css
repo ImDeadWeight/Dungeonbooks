@@ -23,13 +23,9 @@
     display: none;
   }
 
-  /* Room for the notebook's name. */
-  .top-bar .brand {
-    display: none;
-  }
-
   .notebook-current {
-    max-width: calc(100vw - 80px);
+    /* Leaves room for the tab switch and Import. */
+    max-width: calc(100vw - 170px);
   }
 
   /* Import shrinks to its icon. */

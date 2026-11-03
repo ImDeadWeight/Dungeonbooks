@@ -50,12 +50,6 @@
   background: var(--damage);
 }
 
-.top-bar .brand {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-
 .workspace {
   display: grid;
   grid-template-columns: auto 1fr;

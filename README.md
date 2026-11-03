@@ -34,6 +34,19 @@ npm run tauri android build -- --debug --apk --target aarch64 --target x86_64   
 
 The APK lands in `src-tauri/gen/android/app/build/outputs/apk/universal/debug/`.
 
+`src-tauri/gen/android` is generated and not committed, so after `android init` make the same two edits by hand:
+
+- `app/src/main/java/com/dungeonbooks/app/MainActivity.kt`: call `enableEdgeToEdge()` before `super.onCreate(...)`
+  (import `androidx.activity.enableEdgeToEdge`). The phone styles keep clear of the status and navigation bars
+  themselves.
+- Release signing: copy the `signingConfigs` block from Lorekeeper's `app/build.gradle.kts` (it reads
+  `../keystore.properties`; see `C:/Users/plcar/.android-signing/README.txt`), set
+  `signingConfig = signingConfigs.getByName("release")` in the release build type, and put `keystore.properties` next
+  to `settings.gradle`. Then `npm run tauri android build -- --apk --target aarch64` gives a signed release APK in
+  `.../apk/universal/release/`.
+
+The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the app's tile colour).
+
 ## Code layout
 
 - `src/encounters/`, `src/lorekeeper/`: each app's domain, state, storage and UI, as in the separate apps.
@@ -61,5 +74,5 @@ own copies; changes in one place don't reach the other. The copy happens once (`
 records it) and never over data made here. To copy again, close the app and delete `%APPDATA%\com.dungeonbooks.app`.
 
 On Android, apps can't read each other's files, so bring data over with each tab's Import (an Encounters backup, an
-exported notebook) and link the campaign to its notebook again. An imported notebook gets a new id, so characters
-made from its pages there no longer point at them (not yet handled).
+exported notebook) and link the campaign to its notebook again. An imported notebook gets a new id; once it's
+linked, characters made from its pages find them again (by page id) on their own.
