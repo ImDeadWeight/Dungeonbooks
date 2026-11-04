@@ -10,6 +10,7 @@ import { NEW_PAGE_TITLE, useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { CharacterEncounters } from '../encounters/CharacterEncounters';
 import { usePhoneLayout } from '../common/usePhoneLayout';
+import { Backlinks } from './Backlinks';
 import { GroupMembers } from './PageGroups';
 import { PageInfoBar } from './PageInfoBar';
 import { StatBlockPanel } from './StatBlockPanel';
@@ -99,6 +100,7 @@ export function PageView() {
         <PageInfoBar page={page} />
         {page.info?.type === 'character' && <CharacterEncounters page={page} />}
         <GroupMembers page={page} />
+        <Backlinks page={page} />
       </div>
       <div className="page-body">
         <div className="page-scroll">

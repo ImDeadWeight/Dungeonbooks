@@ -11,6 +11,7 @@ import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { EncounterLink } from '../editor/encounterLink';
 import { linkedPageId, PageLink } from '../editor/pageLink';
+import { PeekBacklinks } from '../page/Backlinks';
 import './peek.css';
 
 /** Panel size (px); keep in step with peek.css. */
@@ -98,6 +99,7 @@ export function PeekPanel() {
         {boxes.map((box) => (
           <ReadOnlyBox key={box.id} box={box} />
         ))}
+        {page && <PeekBacklinks pageId={page.id} />}
       </div>
     </div>
   );

@@ -5,19 +5,11 @@
  * Ctrl+click opens it.
  */
 import { X } from 'lucide-react';
-import type { MouseEvent } from 'react';
 import type { Id } from '../../domain/ids';
 import { groupOptions, groupsOf, isGroup, membersOf, pageType, type Page } from '../../domain/notebook';
 import { useNotebook } from '../../state/notebookStore';
-import { useUi } from '../../state/uiStore';
 import { PageTypeIcon } from './pageTypes';
-
-/** Peeks at a page next to the clicked name, or opens it with Ctrl. */
-function showPage(e: MouseEvent, pageId: Id) {
-  const ui = useUi.getState();
-  if (e.ctrlKey || e.metaKey) ui.selectPage(pageId);
-  else ui.openPeek({ pageId, x: e.clientX, y: e.clientY });
-}
+import { showPage } from './showPage';
 
 /** Changes which places and factions a character belongs to. */
 function setBelongsTo(page: Page, ids: Id[]) {
