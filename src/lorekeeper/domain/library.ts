@@ -1,9 +1,11 @@
 /**
  * @file The exported-notebook file format: writing a campaign's notes as one
- * file, and reading such a file back safely.
+ * file (with their pictures, see imageExport.ts), and reading such a file
+ * back safely.
  */
 import { readSharedStatBlock } from 'campaign-link';
 import type { Id } from './ids';
+import { readImageBoxes, readImageData, type ImageData } from './imageExport';
 import { isGroup, parseAliases, type Folder, type Notebook, type Page, type PageInfo, type TextBox } from './notebook';
 import { upgradeNotebook } from './upgrade';
 
@@ -18,11 +20,13 @@ export interface NotebookExport {
   version: number;
   name: string;
   notebook: Notebook;
+  /** The pictures its pages show, by image id (absent when there are none). */
+  images?: ImageData;
 }
 
 /** The text of an export file for a notebook. */
-export function exportText(name: string, notebook: Notebook): string {
-  const file: NotebookExport = { format: EXPORT_FORMAT, version: EXPORT_VERSION, name, notebook };
+export function exportText(name: string, notebook: Notebook, images: ImageData = {}): string {
+  const file: NotebookExport = { format: EXPORT_FORMAT, version: EXPORT_VERSION, name, notebook, ...(Object.keys(images).length ? { images } : {}) };
   return JSON.stringify(file, null, 2);
 }
 
@@ -37,6 +41,8 @@ export function exportFileName(name: string): string {
 export interface ImportedNotebook {
   name: string;
   notebook: Notebook;
+  /** Pictures that came with it, to store with the notes. */
+  images: ImageData;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -62,10 +68,10 @@ export function parseNotebookFile(text: string, fallbackName: string): ImportedN
       throw new Error(`it was exported by a newer version of Lorekeeper (format ${parsed.version})`);
     }
     const name = isString(parsed.name) && parsed.name.trim() ? parsed.name.trim() : fallbackName;
-    return { name, notebook: upgradeNotebook(readNotebook(parsed.notebook)) };
+    return { name, notebook: upgradeNotebook(readNotebook(parsed.notebook)), images: readImageData(parsed.images) };
   }
   // A saved notebook file: { version, data: { folders, pages } }.
-  if (isObject(parsed.data)) return { name: fallbackName, notebook: upgradeNotebook(readNotebook(parsed.data)) };
+  if (isObject(parsed.data)) return { name: fallbackName, notebook: upgradeNotebook(readNotebook(parsed.data)), images: {} };
   throw new Error('the file is not a Lorekeeper notebook');
 }
 
@@ -100,6 +106,7 @@ function readNotebook(raw: unknown): Notebook {
     const aliases = Array.isArray(p.aliases) ? parseAliases(p.aliases.filter(isString).join(',')) : [];
     // A stat block from a newer version, or a damaged one, is left out rather than losing the notebook.
     const statBlock = readSharedStatBlock(p.statBlock);
+    const images = readImageBoxes(p.images);
     return {
       id: p.id,
       title,
@@ -107,6 +114,7 @@ function readNotebook(raw: unknown): Notebook {
       folderId,
       ...(isString(p.parentPageId) ? { parentPageId: p.parentPageId } : {}),
       boxes,
+      ...(images.length ? { images } : {}),
       ...(info ? { info } : {}),
       ...(statBlock ? { statBlock } : {}),
     };

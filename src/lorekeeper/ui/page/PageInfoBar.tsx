@@ -5,7 +5,7 @@
  * menu with Link encounter, Other names and Copy as Markdown. The other names
  * (aliases) field shows once a page has some, or when chosen from the menu.
  */
-import { ClipboardCopy, Swords, Tags } from 'lucide-react';
+import { ClipboardCopy, ImagePlus, Swords, Tags } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useNotebook } from '../../state/notebookStore';
 import {
@@ -21,6 +21,7 @@ import {
 } from '../../domain/notebook';
 import { pageAsMarkdown } from '../../../assistant/notesMarkdown';
 import { MoreMenu } from '../common/MoreMenu';
+import { pickImages } from './useImageInput';
 import { LinkEncounterDialog } from '../encounters/LinkEncounterDialog';
 import { BelongsToField } from './PageGroups';
 import { PageTypeIcon } from './pageTypes';
@@ -121,6 +122,7 @@ export function PageInfoBar({ page }: { page: Page }) {
         items={[
           { label: 'Link encounter…', icon: Swords, onSelect: () => setLinkingEncounter(true) },
           { label: 'Other names…', icon: Tags, onSelect: () => setAddingAliases(true) },
+          { label: 'Add image…', icon: ImagePlus, onSelect: () => pickImages(page.id) },
           { label: 'Copy as Markdown', icon: ClipboardCopy, doneLabel: 'Copied', onSelect: () => navigator.clipboard.writeText(pageAsMarkdown(page)) },
         ]}
       />

@@ -28,6 +28,14 @@ describe('linked from', () => {
     expect(index.get('mira')?.map((b) => b.page.id)).toEqual(['storm']);
   });
 
+  it('counts pins on maps as links', () => {
+    const atlas: Page = {
+      ...page('atlas', 'Atlas'),
+      images: [{ id: 'img', x: 0, y: 0, width: 400, imageId: 'x.png', caption: 'The Veil', pins: [{ id: 'p', x: 0.5, y: 0.5, pageId: 'vault' }] }],
+    };
+    expect(linkedFromIndex([atlas, vaultrock]).get('vault')).toEqual([{ page: atlas, snippet: 'Pinned on the map "The Veil"', count: 1 }]);
+  });
+
   it('leaves out a page linking to itself', () => {
     expect(linkedFromIndex([vaultrock]).get('vault')).toBeUndefined();
   });

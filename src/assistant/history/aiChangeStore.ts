@@ -2,11 +2,13 @@
  * @file The open campaign's AI changes, saved beside its notes as
  * ai-changes-<campaign id>.json: loaded at startup and whenever a campaign
  * opens, saved after each change is recorded or undone, and deleted with
- * the campaign.
+ * the campaign. Images on pages it could bring back are kept.
  */
 import { create } from 'zustand';
 import { useCampaigns } from '../../campaigns/campaignStore';
 import { registerParticipant } from '../../campaigns/lifecycle';
+import { imageIdsOf } from '../../lorekeeper/domain/images';
+import { registerImageKeeper } from '../../lorekeeper/state/imageFiles';
 import { loadDocument, removeDocument, saveDocument } from '../../lorekeeper/storage/documents';
 import { addChange, type AiChange } from './aiChanges';
 
@@ -52,6 +54,11 @@ export function markUndone(id: string) {
 export async function startAiChanges(): Promise<void> {
   const id = useCampaigns.getState().activeId;
   if (id) await load(id);
+  // Undoing a change can bring back pages with images; their files must stay.
+  registerImageKeeper((campaignId) => {
+    const { campaignId: listed, changes } = useAiChanges.getState();
+    return listed === campaignId ? imageIdsOf(changes.flatMap((c) => [...c.before, ...c.after])) : [];
+  });
   registerParticipant({
     opening: (campaignId) => load(campaignId),
     deleted: (campaignId) => removeDocument(changesDoc(campaignId)),

@@ -67,10 +67,15 @@ const sorted = (index: Map<Id, Backlink[]>) => {
   return index;
 };
 
-/** For every page, the other pages that link to it. Links from a page to itself don't count. */
+/** For every page, the other pages that link to it (in text, or by a pin on a map). Links from a page to itself don't count. */
 export function linkedFromIndex(pages: Page[]): Map<Id, Backlink[]> {
   const index = new Map<Id, Backlink[]>();
   for (const page of pages) {
+    for (const image of page.images ?? []) {
+      for (const pin of image.pins ?? []) {
+        if (pin.pageId !== page.id) addHit(index, pin.pageId, page, () => `Pinned on ${image.caption ? `the map "${image.caption}"` : 'a map'}`);
+      }
+    }
     for (const box of page.boxes) {
       for (const block of textBlocks(box.content)) {
         const text = block.map((p) => p.text).join('');

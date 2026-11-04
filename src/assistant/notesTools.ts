@@ -33,7 +33,7 @@ import { createTitleMatcher, normalizeTitle } from '../lorekeeper/domain/titleMa
 import { backlinksOf } from '../lorekeeper/state/backlinkIndex';
 import { useNotebook } from '../lorekeeper/state/notebookStore';
 import { fromMarkdown, toMarkdown } from './markdown';
-import { describeType, linkNames } from './notesMarkdown';
+import { describeImage, describeType, linkNames } from './notesMarkdown';
 
 /** A mistake in what the AI asked for; the message goes back to it. */
 export class ToolError extends Error {}
@@ -302,6 +302,7 @@ export const NOTES_TOOLS: Tool[] = [
       }
       const { linkedFrom } = backlinksOf(pages, page.id);
       if (linkedFrom.length) lines.push(`Linked from: ${linkedFrom.map((b) => b.page.title).join(', ')}`);
+      for (const image of page.images ?? []) lines.push(describeImage(image, pages));
       if (page.statBlock) lines.push('Has a stat block.');
       if (!page.boxes.length) lines.push('', '(No text yet.)');
       page.boxes.forEach((box, i) => lines.push('', `--- Text box ${i + 1} ---`, boxMarkdown(box)));

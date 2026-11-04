@@ -2,19 +2,23 @@
  * @file The open page: its title, type and (for characters) the encounters
  * they're in and the stat block panel, (for places and factions) the
  * characters belonging there, and a canvas where clicking any empty
- * spot starts a new text box there (OneNote style).
+ * spot starts a new text box there (OneNote style). Images dropped or pasted
+ * on it sit there too, and one can open as a map over the page.
  */
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import type { Page } from '../../domain/notebook';
 import { NEW_PAGE_TITLE, useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { CharacterEncounters } from '../encounters/CharacterEncounters';
+import { MapView } from '../map/MapView';
 import { usePhoneLayout } from '../common/usePhoneLayout';
 import { Backlinks } from './Backlinks';
+import { ImageBoxView } from './ImageBoxView';
 import { GroupMembers } from './PageGroups';
 import { PageInfoBar } from './PageInfoBar';
 import { StatBlockPanel } from './StatBlockPanel';
 import { TextBoxView } from './TextBoxView';
+import { useImageInput } from './useImageInput';
 import './page.css';
 
 /** Room left past the right-most / lowest box so there is always space to click (px). */
@@ -65,6 +69,7 @@ export function PageView() {
   // Phones show the boxes as one column in reading order; their saved positions are left alone.
   const phone = usePhoneLayout();
   const statBlockOpen = useUi((s) => s.statBlockOpen);
+  const imageInput = useImageInput(page);
 
   if (!page) {
     return (
@@ -74,8 +79,10 @@ export function PageView() {
     );
   }
 
-  const width = Math.max(0, ...page.boxes.map((b) => b.x + b.width)) + CANVAS_MARGIN;
-  const height = Math.max(0, ...page.boxes.map((b) => b.y)) + CANVAS_MARGIN;
+  const images = page.images ?? [];
+  const width = Math.max(0, ...page.boxes.map((b) => b.x + b.width), ...images.map((i) => i.x + i.width)) + CANVAS_MARGIN;
+  // An image is about as tall as it is wide; the margin covers the rest.
+  const height = Math.max(0, ...page.boxes.map((b) => b.y), ...images.map((i) => i.y + i.width)) + CANVAS_MARGIN;
 
   // Clicking empty canvas starts a new box at that spot (on a phone: after the last box).
   const addBoxAt = (e: MouseEvent<HTMLDivElement>) => {
@@ -90,8 +97,12 @@ export function PageView() {
     useUi.getState().setFocusBox(id);
   };
 
-  // Reading order on a phone: top to bottom, then left to right.
-  const boxes = phone ? [...page.boxes].sort((a, b) => a.y - b.y || a.x - b.x) : page.boxes;
+  // Reading order on a phone: top to bottom, then left to right (text and images together).
+  const items = [
+    ...page.boxes.map((box) => ({ at: box, view: <TextBoxView key={box.id} pageId={page.id} box={box} /> })),
+    ...images.map((image) => ({ at: image, view: <ImageBoxView key={image.id} pageId={page.id} image={image} /> })),
+  ];
+  if (phone) items.sort((a, b) => a.at.y - b.at.y || a.at.x - b.at.x);
 
   return (
     <main className="main-panel page-view">
@@ -108,14 +119,14 @@ export function PageView() {
             className={`page-canvas${phone ? ' flow' : ''}`}
             style={phone ? undefined : { minWidth: width, minHeight: height }}
             onMouseDown={addBoxAt}
+            {...imageInput}
           >
-            {page.boxes.length === 0 && <p className="canvas-hint">{phone ? 'Tap here to start writing.' : 'Click anywhere to start writing.'}</p>}
-            {boxes.map((box) => (
-              <TextBoxView key={box.id} pageId={page.id} box={box} />
-            ))}
+            {page.boxes.length === 0 && images.length === 0 && <p className="canvas-hint">{phone ? 'Tap here to start writing.' : 'Click anywhere to start writing.'}</p>}
+            {items.map((item) => item.view)}
           </div>
         </div>
         {statBlockOpen && page.info?.type === 'character' && <StatBlockPanel key={page.id} page={page} />}
+        <MapView />
       </div>
     </main>
   );

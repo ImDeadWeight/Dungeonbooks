@@ -3,7 +3,7 @@
  * (the copy buttons, for pasting into any AI chat), and the link lookups
  * Markdown needs. Uses the open campaign's notes.
  */
-import { byFolderOrder, byName, groupsOf, PAGE_TYPES, pageType, parentPlace, type Page } from '../lorekeeper/domain/notebook';
+import { byFolderOrder, byName, groupsOf, PAGE_TYPES, pageType, parentPlace, type ImageBox, type Page } from '../lorekeeper/domain/notebook';
 import { normalizeTitle } from '../lorekeeper/domain/titleMatcher';
 import type { Id } from '../lorekeeper/domain/ids';
 import { useNotebook } from '../lorekeeper/state/notebookStore';
@@ -34,13 +34,21 @@ export function describeType(page: Page, pages: Page[]): string {
   return parent ? `${label} inside ${parent.title}` : label;
 }
 
-/** A page as Markdown: its title as a heading, what it is, then its text boxes in reading order. */
+/** An image in words (its pixels aren't shared): its caption, and the pages pinned on it if it's a map. */
+export function describeImage(image: ImageBox, pages: Page[]): string {
+  const caption = image.caption ? `Image: "${image.caption}"` : 'Image (no caption)';
+  const pinned = (image.pins ?? []).map((pin) => pages.find((p) => p.id === pin.pageId)?.title).filter(Boolean);
+  return pinned.length ? `${caption}, a map with pins for ${pinned.join(', ')}` : caption;
+}
+
+/** A page as Markdown: its title as a heading, what it is, then its text boxes in reading order, then its images in words. */
 export function pageAsMarkdown(page: Page, headingLevel = 1): string {
   const { pages } = useNotebook.getState();
   const names = linkNames();
   const about = [describeType(page, pages), ...(page.aliases?.length ? [`also called ${page.aliases.join(', ')}`] : [])].join(' · ');
   const boxes = [...page.boxes].sort((a, b) => a.y - b.y || a.x - b.x).map((b) => toMarkdown(b.content, names)).filter((t) => t.trim());
-  return [`${'#'.repeat(headingLevel)} ${page.title}`, `*${about}*`, ...boxes].join('\n\n');
+  const images = (page.images ?? []).map((i) => `*[${describeImage(i, pages)}]*`);
+  return [`${'#'.repeat(headingLevel)} ${page.title}`, `*${about}*`, ...boxes, ...images].join('\n\n');
 }
 
 /** A page followed by the pages under it (at any depth), alphabetical at each level. */
