@@ -1,0 +1,64 @@
+/* @file Backlinks under a page's title, and their short form in the peek panel. */
+
+.backlinks {
+  padding: 6px 6px 0;
+}
+
+.backlinks-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  background: none;
+  border: none;
+  font-size: 13px;
+}
+
+.backlinks section {
+  padding: 4px 0 0 20px;
+}
+
+.backlinks-title {
+  margin: 4px 0;
+  font-size: 12px;
+  font-weight: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.backlinks ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.backlink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 2px 0;
+}
+
+.backlink .page-chip-name {
+  flex-shrink: 0;
+}
+
+.backlink-snippet {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.peek-backlinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0 0;
+  font-size: 13px;
+  border-top: 1px solid var(--border);
+}

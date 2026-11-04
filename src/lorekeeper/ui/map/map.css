@@ -1,0 +1,150 @@
+/* @file The map view: the zoomable image, its pins, and the pin picker and menu. */
+
+.map-view {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.map-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.map-header h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.map-hint {
+  font-size: 12px;
+}
+
+.map-frame {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+
+.map-frame img {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: none;
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+
+button.map-pin {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* The pin's point sits on the spot. */
+  transform: translate(-50%, -100%);
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  touch-action: none;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+button.map-pin svg {
+  order: 2;
+  fill: var(--panel);
+}
+
+button.map-pin.broken {
+  color: var(--text-muted);
+}
+
+.map-pin-label {
+  order: 1;
+  padding: 1px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text);
+  background: color-mix(in srgb, var(--panel) 85%, transparent);
+  border-radius: 4px;
+}
+
+.map-zoom {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.pin-picker,
+.pin-menu {
+  position: absolute;
+  z-index: 2;
+  min-width: 220px;
+  max-width: min(320px, calc(100% - 24px));
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  cursor: default;
+}
+
+.pin-picker input {
+  width: 100%;
+}
+
+.pin-picker ul {
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pin-picker li button,
+.pin-menu button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.pin-picker li button.active,
+.pin-picker li button:hover,
+.pin-menu button:hover {
+  background: var(--panel-hover);
+}
+
+.pin-menu-title {
+  padding: 2px 8px 6px;
+  font-weight: 600;
+}
+
+.pin-menu button.damage-text {
+  color: var(--damage-hover);
+}
+
+/* The map covers the page body. */
+.page-body {
+  position: relative;
+}

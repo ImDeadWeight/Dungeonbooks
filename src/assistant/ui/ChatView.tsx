@@ -12,10 +12,11 @@ import { changeDetails, describeCall } from '../chat/describeCall';
 import { useAssistantSettings } from '../chat/settings';
 import { listModels } from '../models/clients';
 import type { ChatMessage, ToolCall, ToolResult } from '../models/types';
-import { NOTES_TOOLS } from '../notesTools';
+import { toolNamed } from '../tools';
+import { UndoChangeButton } from '../../shell/aiChanges/UndoChangeButton';
 import { MarkdownText } from './MarkdownText';
 
-const isChange = (call: ToolCall) => !NOTES_TOOLS.find((t) => t.name === call.name)?.readOnly;
+const isChange = (call: ToolCall) => !toolNamed(call.name)?.readOnly;
 
 /** The connection and model pickers. */
 function ModelPicker({ showModels }: { showModels: () => void }) {
@@ -79,6 +80,7 @@ function CallLine({ call, result }: { call: ToolCall; result?: ToolResult }) {
         {result && (result.isError ? <X size={13} /> : <Check size={13} />)}
         {result && <ChevronRight size={13} className={open ? 'open' : undefined} />}
       </button>
+      {result?.changeId && <UndoChangeButton changeId={result.changeId} />}
       {open && result && <pre className="assistant-call-result">{result.text}</pre>}
     </div>
   );

@@ -33,6 +33,8 @@ export interface CharacterTemplate {
   statBlock: StatBlock | null;
   /** The Lorekeeper page this character came from; absent when it didn't come from one. */
   lore?: LoreRef;
+  /** The compendium creature it was copied from (its id in its format's compendium); absent for characters made here. */
+  compendiumId?: string;
 }
 
 /** A page in a campaign's notes (see the campaign-link package). */

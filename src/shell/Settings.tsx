@@ -1,19 +1,21 @@
 /**
  * @file The Settings button and dialog: a tab per section. Assistant: what
  * the Assistant tab's model may change in the notes. AI apps (desktop app):
- * connecting apps like Claude, and what they may change.
+ * connecting apps like Claude, and what they may change. AI changes: what
+ * they changed, with Undo.
  */
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useAssistantSettings, type AppPermission, type ChatPermission } from '../assistant/chat/settings';
 import { aiConnectionsAvailable } from '../assistant/connection';
-import { NOTES_TOOLS } from '../assistant/notesTools';
+import { ALL_TOOLS } from '../assistant/tools';
 import { Modal } from '../ui/Modal';
 import { AiAppsSettings } from './AiConnect';
+import { AiChangesList } from './aiChanges/AiChangesList';
 import { closeSettings, openSettings, useSettingsDialog, type SettingsSection } from './settingsDialog';
 import './settings.css';
 
 /** The tools that change the notes, each set on its own. */
-const CHANGES = NOTES_TOOLS.filter((t) => !t.readOnly);
+const CHANGES = ALL_TOOLS.filter((t) => !t.readOnly);
 
 const CHAT_CHOICES: { value: ChatPermission; label: string }[] = [
   { value: 'ask', label: 'Ask first' },
@@ -73,8 +75,8 @@ function AssistantSection() {
       <h3>What the model may change</h3>
       <p className="muted">
         For the chats in the Assistant tab. Reading and searching the notes is always allowed. "Ask first" shows
-        each change for you to allow or skip; "Never" doesn't offer it to the model at all. There is no undo for
-        a model's changes.
+        each change for you to allow or skip; "Never" doesn't offer it to the model at all. Each change can be
+        undone, from the chat or from AI changes.
       </p>
       <PermissionTable choices={CHAT_CHOICES} value={(tool) => chat[tool] ?? 'ask'} set={(tool, v) => useAssistantSettings.getState().setChatPermission(tool, v)} />
     </>
@@ -96,12 +98,20 @@ function AiAppsSection() {
 const sections = (): { id: SettingsSection; label: string }[] => [
   { id: 'assistant', label: 'Assistant' },
   ...(aiConnectionsAvailable() ? [{ id: 'ai-apps' as const, label: 'AI apps' }] : []),
+  { id: 'ai-changes', label: 'AI changes' },
 ];
+
+const SECTIONS: Record<SettingsSection, () => JSX.Element> = {
+  assistant: AssistantSection,
+  'ai-apps': AiAppsSection,
+  'ai-changes': AiChangesList,
+};
 
 /** The dialog, while it is open; drawn once, by the shell. */
 export function SettingsDialog() {
   const section = useSettingsDialog((s) => s.section);
   if (!section) return null;
+  const Section = SECTIONS[section];
   return (
     <Modal title="Settings" size="medium" onClose={closeSettings} footer={<button onClick={closeSettings}>Done</button>}>
       <div className="settings">
@@ -112,7 +122,9 @@ export function SettingsDialog() {
             </button>
           ))}
         </div>
-        <div className="settings-section">{section === 'ai-apps' ? <AiAppsSection /> : <AssistantSection />}</div>
+        <div className="settings-section">
+          <Section />
+        </div>
       </div>
     </Modal>
   );

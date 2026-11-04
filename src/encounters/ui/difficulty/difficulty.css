@@ -1,0 +1,32 @@
+/* @file The difficulty badge, coloured by how hard the fight is. */
+
+.difficulty-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--text-muted);
+  cursor: help;
+}
+
+.difficulty-moderate {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.difficulty-high,
+.difficulty-severe {
+  color: var(--text);
+  border-color: var(--resolve);
+}
+
+.difficulty-beyond-high,
+.difficulty-extreme,
+.difficulty-beyond-extreme {
+  color: var(--text);
+  border-color: var(--damage);
+  background: color-mix(in srgb, var(--damage) 18%, transparent);
+}

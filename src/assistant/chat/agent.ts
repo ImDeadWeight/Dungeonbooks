@@ -12,7 +12,9 @@ import { useUi as useLorekeeperUi } from '../../lorekeeper/state/uiStore';
 import { INSTRUCTIONS } from '../mcpServer';
 import { chat } from '../models/clients';
 import { ModelError, type ChatMessage, type Connection, type ToolCall, type ToolResult, type ToolSpec } from '../models/types';
-import { NOTES_TOOLS, ToolError } from '../notesTools';
+import { runRecorded } from '../history/recordedRun';
+import { ALL_TOOLS, toolNamed } from '../tools';
+import { outputImage, outputText, ToolError } from '../tools/types';
 import { useChats } from './chats';
 import { chatPermission, currentConnection } from './settings';
 
@@ -27,7 +29,7 @@ const TITLE_EXCERPT = 600;
 
 /** The tools the model is offered: all but the changes Settings say never to make. */
 const toolSpecs = (): ToolSpec[] =>
-  NOTES_TOOLS.filter((t) => t.readOnly || chatPermission(t.name) !== 'never').map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema }));
+  ALL_TOOLS.filter((t) => t.readOnly || chatPermission(t.name) !== 'never').map((t) => ({ name: t.name, description: t.description, parameters: t.inputSchema }));
 
 let controller: AbortController | null = null;
 
@@ -64,7 +66,7 @@ function askToChange(chatId: string, call: ToolCall): Promise<boolean> {
 /** Runs one tool call, asking first when it changes the notes. */
 async function runCall(chatId: string, campaignId: string, call: ToolCall): Promise<ToolResult> {
   const result = (text: string, isError = false): ToolResult => ({ callId: call.id, name: call.name, text, isError });
-  const tool = NOTES_TOOLS.find((t) => t.name === call.name);
+  const tool = toolNamed(call.name);
   if (!tool) return result(`There is no tool called ${call.name}.`, true);
   if (!call.args) return result(`The arguments for ${call.name} weren't a JSON object: ${call.rawArgs.slice(0, 200)}`, true);
   // The tools work on whichever campaign is open; a chat about another one mustn't touch it.
@@ -76,7 +78,9 @@ async function runCall(chatId: string, campaignId: string, call: ToolCall): Prom
     return result('The user did not allow this change. Ask them what they would like instead.', true);
   }
   try {
-    return result(tool.run(call.args));
+    const { output, changeId } = await runRecorded(tool, call.args, 'assistant');
+    const image = outputImage(output);
+    return { ...result(outputText(output)), ...(changeId && { changeId }), ...(image && { image }) };
   } catch (e) {
     return result(e instanceof ToolError ? e.message : `Something went wrong: ${e instanceof Error ? e.message : String(e)}`, true);
   }

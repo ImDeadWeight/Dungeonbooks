@@ -10,6 +10,14 @@ export interface Campaign {
   name: string;
   /** Default format for this campaign's new encounters and their new characters; null = none. */
   formatId: FormatId | null;
+  /** The usual party (how many characters, at what level), for rating encounters that have no PCs in them yet; absent when not set. */
+  party?: PartySize;
+}
+
+/** A party for rating encounters. */
+export interface PartySize {
+  size: number;
+  level: number;
 }
 
 /** Every campaign, and the one that is open. */

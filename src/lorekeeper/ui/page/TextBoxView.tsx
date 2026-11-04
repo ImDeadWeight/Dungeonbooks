@@ -18,6 +18,7 @@ import { LinkAutocomplete } from '../editor/linkAutocomplete';
 import { LinkPicker } from '../editor/LinkPicker';
 import { LinkSuggestions, refreshLinkSuggestions } from '../editor/linkSuggestions';
 import { linkedPageId, PageLink, unlinkAt } from '../editor/pageLink';
+import { trackPointer } from './trackPointer';
 
 /** Narrowest a box can be resized to (px). */
 const MIN_WIDTH = 140;
@@ -31,23 +32,6 @@ interface Props {
 /** Every page id, title and alias, as one string; changes whenever a page is added, renamed, given aliases or deleted. */
 const selectTitlesKey = (s: ReturnType<typeof useNotebook.getState>) =>
   s.pages.map((p) => [p.id, p.title, ...(p.aliases ?? [])].join('\u0000')).join('\u0001');
-
-/**
- * Follows pointer moves until release, calling onMove with the distance from
- * the start. Used for dragging and resizing.
- */
-function trackPointer(e: ReactPointerEvent, onMove: (dx: number, dy: number) => void) {
-  e.preventDefault();
-  const startX = e.clientX;
-  const startY = e.clientY;
-  const move = (ev: PointerEvent) => onMove(ev.clientX - startX, ev.clientY - startY);
-  const up = () => {
-    window.removeEventListener('pointermove', move);
-    window.removeEventListener('pointerup', up);
-  };
-  window.addEventListener('pointermove', move);
-  window.addEventListener('pointerup', up);
-}
 
 /** A movable, resizable rich-text box. */
 export function TextBoxView({ pageId, box }: Props) {

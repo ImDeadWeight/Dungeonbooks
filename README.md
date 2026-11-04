@@ -15,6 +15,15 @@ encounter or character (and its campaign, if another one is open).
 
 The character library and custom conditions are shared by every campaign.
 
+**SRD creatures and difficulty.** For 5e (2014 and 2024) the encounter builder's list switches between your characters
+and the SRD's creatures (SRD 5.1 and 5.2.1; search by name, CR and type, open a row for its stat block). Adding one
+copies it into the character library once, tagged SRD, and reuses that copy; the library's **From the SRD** window
+copies them in to edit. The encounter header and the builder's cart rate the fight: 5e by SRD 5.2.1's XP budget per
+character (Low, Moderate, High), PF2e and SF2e by GM Core's threat budgets. PCs make the party (NPCs on their side are
+allies); until an encounter has PCs, the campaign's usual party (in its settings) stands in. The creatures live in
+`public/compendium/`, built by `npx vite-node scripts/compendium/build.ts -- <folder>` from the 5e-bits data; the
+licence notices are in [NOTICE.md](NOTICE.md).
+
 **Linking notes.** Mentions of another page's title or aliases (the page's **Also called** field, comma-separated)
 get a dotted underline and a link button; plurals count ("Veilstrands"). The first time a page's exact name is typed
 on a page it links by itself once a space or punctuation follows; **Backspace** straight after takes the link off.
@@ -30,7 +39,16 @@ it as Markdown, links as `[[Title]]`, for pasting into any AI chat.
 Each sidebar row has one ⋯ button for its actions (rename, new page or folder inside, page types, copy, delete; folders
 also keep a + for a new page inside), and
 the bar under a page's title has a ⋯ menu for Link encounter, Other names (the aliases field, which then stays while
-a page has some) and Copy as Markdown.
+a page has some), Add image and Copy as Markdown.
+
+**Backlinks.** Under a page's title, a folded line says which pages link to it (in text, or by a pin on a map) and
+which mention it without a link; opened, it lists each with the words around the mention, and a link button that links
+those mentions. The peek panel lists the pages linking there.
+
+**Images and maps.** Drop or paste pictures on a page, or use Add image; drag, resize and caption them like text
+boxes. An image's map button (or a double-click) opens it as a map over the page: zoom and pan, tap a spot to pin a
+page there (typing picks the page, or makes one), tap a pin to peek, open its page or open that page's own map, and
+drag pins to move them. Pins show on the image on the page too. Exports carry the pictures inside the file.
 
 **Pages inside pages.** A page can hold other pages: drag a page onto another (or use "New page under this one" in its
 ⋯ menu), and the page gets a caret that opens and closes like a folder; clicking its name still opens it. So Vaultrock
@@ -43,7 +61,10 @@ notes as they were is kept as `notebook-<campaign id>.before-format-2.json`.
 
 **Connect AI** (desktop app, top bar) lets AI apps that speak the Model Context Protocol work with the open campaign's
 notes: get an overview, search, read pages as Markdown, create pages, add or replace text, change a page's details and
-link mentions. They can't delete pages, and their changes have no undo. Connections are off until switched on there;
+link mentions. They can add a picture to a page from a file on this computer (by its full path; only PNG, JPEG,
+WebP and GIF files up to 25 MB, checked by the native side), a web address, or base64. On maps they can look at the picture (with a grid and numbered pins, for models that see images), add,
+move and remove pins, and set captions. They can also look at the Encounters tab without changing it: list and read
+encounters, search and read creatures (the user's NPCs and the SRD's), and rate a planned fight. They can't delete pages, and each change can be undone (Settings → AI changes, or the notice that shows when one happens). Connections are off until switched on there;
 the dialog gives the setup to paste:
 
 - Claude Desktop and Claude Code start the app's executable with `--mcp-stdio`, which relays to the running app (and
@@ -57,7 +78,7 @@ servers to connect to: Ollama, LM Studio, llama.cpp, Jan, KoboldCpp, text-genera
 this computer (by their usual ports), and on the local network Redstart Nest (by its beacon on port 8765) and Ollama or
 LM Studio shared to the network; a phone looks on the network. Servers can also be added by address, and Claude or GPT
 used with an Anthropic or OpenAI API key (paid per use). Reading and searching happen straight away; each change waits
-for Allow or Skip unless allowed for the whole chat. Chats, connections and keys are saved on the device.
+for Allow or Skip unless allowed for the whole chat, and shows Undo once made. Chats, connections and keys are saved on the device.
 
 Built with Tauri 2 + React + TypeScript, from the Encounters and Lorekeeper code; the shared game formats and catalogue
 formats still come from the [campaign-link](https://github.com/ImDeadWeight/campaign-link) package.
@@ -106,7 +127,8 @@ The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the a
   apps used to write to the shared folder), and the showing tab plus opening things in the other one (`navigation.ts`).
 - `src/shell/`: the window: both tabs, the tab switch, the campaign menu and dialog, the Connect AI dialog, window
   controls.
-- `src/assistant/`: what AI apps can do (`notesTools.ts`), notes as Markdown and back (`markdown.ts`,
+- `src/assistant/`: what AI apps can do (`notesTools.ts` for the notes; `tools/` for maps, encounters and creatures,
+  all listed in `tools/index.ts`), notes as Markdown and back (`markdown.ts`,
   `notesMarkdown.ts`), and answering their MCP messages (`mcpServer.ts`, `connection.ts`). The native side,
   `src-tauri/src/mcp.rs`, runs the local server, hands each request to the web UI, and has the `--mcp-stdio` relay.
   The Assistant tab: `chat/` (chats, connections, running a chat), `models/` (finding servers, talking to them over
@@ -127,7 +149,9 @@ Saved as JSON under `%APPDATA%\com.dungeonbooks.app\data\`:
 - `shared\`: `campaigns.json` (every campaign's name and default format, and which is open), `view.json` (which tab
   was showing), `copied-from-old-apps.json`.
 - `encounters\`: `library.json` (every campaign's areas and encounters), `characters.json`, `conditions.json`.
-- `lorekeeper\`: `notebook-<campaign id>.json` (a campaign's notes), `view.json` (folded folders per campaign).
+- `lorekeeper\`: `notebook-<campaign id>.json` (a campaign's notes), `view.json` (folded folders per campaign),
+  `ai-changes-<campaign id>.json` (the last 100 AI changes, for undo), `images\<campaign id>\` (pictures, named by
+  content hash; ones nothing uses are deleted when the campaign opens).
 
 Before there was one campaign list, Encounters' campaigns and Lorekeeper's notebooks were separate lists with links
 between them. The first start that finds no `campaigns.json` makes the one list: a linked campaign and notebook become

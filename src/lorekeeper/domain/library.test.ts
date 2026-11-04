@@ -31,12 +31,21 @@ describe('reading notebook files', () => {
     expect(parseNotebookFile(exportText('The Veilstrand and the Everstorm', notebook), 'file')).toEqual({
       name: 'The Veilstrand and the Everstorm',
       notebook,
+      images: {},
     });
+  });
+
+  it('carries pictures with the notes', () => {
+    const imageId = `${'c'.repeat(64)}.png`;
+    const withImage = { ...notebook, pages: [{ ...notebook.pages[0], images: [{ id: 'img', x: 0, y: 0, width: 300, imageId }] }, ...notebook.pages.slice(1)] };
+    const read = parseNotebookFile(exportText('Atlas', withImage, { [imageId]: 'iVBORw==' }), 'file');
+    expect(read.notebook.pages[0].images?.[0].imageId).toBe(imageId);
+    expect(read.images).toEqual({ [imageId]: 'iVBORw==' });
   });
 
   it('accepts a saved notebook file, named after the file', () => {
     const saved = JSON.stringify({ version: 1, data: notebook });
-    expect(parseNotebookFile(saved, 'notebook')).toEqual({ name: 'notebook', notebook });
+    expect(parseNotebookFile(saved, 'notebook')).toEqual({ name: 'notebook', notebook, images: {} });
   });
 
   it('refuses files that are not notebooks', () => {

@@ -4,6 +4,7 @@
 import { useUi, type Modal } from '../state/uiStore';
 import { CharacterLibrary, EditCharacterModal } from './characters/CharacterLibrary';
 import { ConfirmDialog } from './common/ConfirmDialog';
+import { CompendiumModal } from './compendium/CompendiumModal';
 import { ConditionEditor } from './conditions/ConditionEditor';
 import { ConditionLibrary } from './conditions/ConditionLibrary';
 import { AddToEncounter } from './create/AddToEncounter';
@@ -18,6 +19,8 @@ function render(m: Modal) {
       return <CreateScreen preset={m.preset} />;
     case 'characters':
       return <CharacterLibrary />;
+    case 'compendium':
+      return <CompendiumModal />;
     case 'conditions':
       return <ConditionLibrary />;
     case 'editCondition':

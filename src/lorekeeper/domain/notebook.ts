@@ -25,6 +25,29 @@ export interface TextBox {
   content: JSONContent;
 }
 
+/** A pin on an image used as a map: a spot (as fractions of the image's width and height) linked to a page. */
+export interface MapPin {
+  id: Id;
+  /** 0 = left edge, 1 = right edge. */
+  x: number;
+  /** 0 = top edge, 1 = bottom edge. */
+  y: number;
+  pageId: Id;
+}
+
+/** An image placed on a page's canvas (stored apart from the notes, by `imageId`). Its height follows its width. */
+export interface ImageBox {
+  id: Id;
+  x: number;
+  y: number;
+  width: number;
+  /** The stored image (see storage/images.ts). */
+  imageId: string;
+  caption?: string;
+  /** Present once the image has pins (a map). */
+  pins?: MapPin[];
+}
+
 /** Player character or non-player character (the same split Encounters makes). */
 export type CharacterKind = 'pc' | 'npc';
 
@@ -63,6 +86,8 @@ export interface Page {
   /** The page this one sits under in the sidebar (its folderId is then null). */
   parentPageId?: Id;
   boxes: TextBox[];
+  /** Images on the canvas, absent when it has none. */
+  images?: ImageBox[];
   /** Absent for plain notes. */
   info?: PageInfo;
   /** Character pages: the character's stat block (the same shapes as Encounters'); absent until one is added. */

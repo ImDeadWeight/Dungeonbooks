@@ -41,8 +41,8 @@ export const newConnectionToken = () => invoke<ConnectionStatus>('ai_connection_
 export async function startAiConnection() {
   if (!aiConnectionsAvailable()) return;
   const version = await getVersion();
-  await listen<{ id: number; body: string }>('mcp-request', ({ payload }) => {
-    const body = handleMcpBody(payload.body, version);
+  await listen<{ id: number; body: string }>('mcp-request', async ({ payload }) => {
+    const body = await handleMcpBody(payload.body, version);
     void invoke('mcp_reply', { id: payload.id, body });
   });
   await invoke('mcp_attach');

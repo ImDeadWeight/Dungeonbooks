@@ -8,6 +8,12 @@ import type { ChatMessage, ToolCall } from '../models/types';
 import { assistantDocuments } from './settings';
 
 const CHATS_DOC = 'chats';
+
+/** A chat as saved: pictures tools gave back (maps) are only for the model at the time, so they're left out. */
+const withoutPictures = (chat: Chat): Chat => ({
+  ...chat,
+  messages: chat.messages.map((m) => (m.role === 'tool' ? { ...m, results: m.results.map(({ image: _image, ...r }) => r) } : m)),
+});
 /** Characters of the first message used as a new chat's title, until the model names it. */
 const TITLE_LENGTH = 48;
 
@@ -96,6 +102,6 @@ export async function startChats(): Promise<void> {
   const loaded = await assistantDocuments.loadDocument<{ chats: Chat[] }>(CHATS_DOC, () => ({ chats: [] }));
   useChats.setState({ chats: Array.isArray(loaded.data.chats) ? loaded.data.chats : [] });
   useChats.subscribe((s, before) => {
-    if (s.chats !== before.chats) assistantDocuments.saveDocument(CHATS_DOC, { chats: s.chats }).catch(() => undefined);
+    if (s.chats !== before.chats) assistantDocuments.saveDocument(CHATS_DOC, { chats: s.chats.map(withoutPictures) }).catch(() => undefined);
   });
 }

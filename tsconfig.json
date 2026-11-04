@@ -17,5 +17,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "build", "vite.config.ts"]
+  "include": ["src", "build", "vite.config.ts", "scripts/compendium/srd5e.ts", "scripts/compendium/srd5e.test.ts"]
 }

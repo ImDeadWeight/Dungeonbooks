@@ -9,6 +9,7 @@ import type { Node as PmNode } from '@tiptap/pm/model';
 import { Plugin, PluginKey, type EditorState } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { Id } from '../../domain/ids';
+import { linkCandidates } from '../../domain/linkCandidates';
 import { createTitleMatcher, normalizeTitle, type TitleMatcher } from '../../domain/titleMatcher';
 import { useNotebook } from '../../state/notebookStore';
 import { PAGE_LINK } from './pageLink';
@@ -28,11 +29,7 @@ let cached: { key: string; matcher: TitleMatcher } | null = null;
  * title wins over another page's alias.
  */
 export function mentionMatcher(currentPageId: Id): TitleMatcher {
-  const others = useNotebook.getState().pages.filter((p) => p.id !== currentPageId);
-  const candidates = [
-    ...others.map((p) => ({ pageId: p.id, title: p.title })),
-    ...others.flatMap((p) => (p.aliases ?? []).map((title) => ({ pageId: p.id, title }))),
-  ];
+  const candidates = linkCandidates(useNotebook.getState().pages, currentPageId);
   const key = candidates.map((c) => `${c.pageId}\u0000${c.title}`).join('\u0001');
   if (cached?.key !== key) cached = { key, matcher: createTitleMatcher(candidates) };
   return cached.matcher;

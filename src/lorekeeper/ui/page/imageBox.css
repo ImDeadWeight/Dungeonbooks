@@ -1,0 +1,74 @@
+/* @file Images on the page canvas (they share the text box's bar, border and resize edge). */
+
+.image-box {
+  cursor: default;
+}
+
+.image-frame {
+  position: relative;
+  line-height: 0;
+}
+
+.image-frame img {
+  width: 100%;
+  height: auto;
+  border-radius: 4px;
+  user-select: none;
+}
+
+.image-loading {
+  height: 160px;
+  border-radius: 4px;
+  background: var(--panel-raised);
+}
+
+.image-missing {
+  padding: 24px 10px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+button.image-pin {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 0;
+  min-width: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
+}
+
+button.image-pin svg {
+  fill: var(--panel);
+}
+
+input.image-caption {
+  width: 100%;
+  margin-top: 4px;
+  padding: 2px 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.image-box:hover input.image-caption,
+input.image-caption:focus {
+  border-color: var(--border);
+}
+
+input.image-caption:placeholder-shown:not(:focus) {
+  visibility: hidden;
+}
+
+.image-box:hover input.image-caption:placeholder-shown {
+  visibility: visible;
+}
+
+/* Fingers can't hover, so the caption field always shows. */
+@media (pointer: coarse) {
+  input.image-caption:placeholder-shown:not(:focus) {
+    visibility: visible;
+  }
+}
