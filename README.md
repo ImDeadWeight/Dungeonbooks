@@ -83,8 +83,8 @@ The APK lands in `src-tauri/gen/android/app/build/outputs/apk/universal/debug/`.
   `signingConfig = signingConfigs.getByName("release")` in the release build type, and put `keystore.properties` next
   to `settings.gradle`. Then `npm run tauri android build -- --apk --target aarch64` gives a signed release APK in
   `.../apk/universal/release/`.
-- Plain http on the local network (the Assistant's model servers): in `app/src/main/AndroidManifest.xml`, set
-  `android:usesCleartextTraffic="true"` on `<application>` (debug builds already allow it).
+- Plain http on the local network (the Assistant's model servers): in `app/build.gradle.kts`'s release build type,
+  add `manifestPlaceholders["usesCleartextTraffic"] = "true"` (debug builds already allow it).
 
 The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the app's tile colour).
 
