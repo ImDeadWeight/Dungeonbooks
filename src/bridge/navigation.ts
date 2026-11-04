@@ -8,7 +8,8 @@ import type { LinkTarget } from 'campaign-link';
 import { create } from 'zustand';
 import { sharedDocuments } from './sharedDocuments';
 
-export type Tab = LinkTarget['app'];
+/** The two apps' tabs, plus the assistant's (which has no links into it). */
+export type Tab = LinkTarget['app'] | 'assistant';
 
 /** The shell's document (which tab was showing). */
 const VIEW_DOC = 'view';
@@ -42,7 +43,8 @@ export function openTarget(target: LinkTarget) {
 /** Reopens the tab that was showing last time, then remembers each change. */
 export async function startTabs(): Promise<void> {
   const loaded = await sharedDocuments.loadDocument<TabsState>(VIEW_DOC, () => ({ tab: 'encounters' }));
-  useTabs.setState({ tab: loaded.data.tab === 'lorekeeper' ? 'lorekeeper' : 'encounters' });
+  const saved = loaded.data.tab;
+  useTabs.setState({ tab: saved === 'lorekeeper' || saved === 'assistant' ? saved : 'encounters' });
   useTabs.subscribe((s) => {
     sharedDocuments.saveDocument(VIEW_DOC, { tab: s.tab }).catch(() => undefined);
   });

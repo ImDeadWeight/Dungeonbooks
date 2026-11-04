@@ -1,10 +1,11 @@
 /**
- * @file The whole window: the Encounters and Lorekeeper tabs. Both stay
+ * @file The whole window: the Encounters, Lorekeeper and Assistant tabs. All stay
  * mounted, so switching keeps each where it was (open dialogs, the caret in a
  * page); only the showing one is displayed. Each tab draws its own top bar,
  * with the tab switch in it.
  */
 import { useLayoutEffect } from 'react';
+import { AssistantApp } from '../assistant/ui/AssistantApp';
 import { useTabs } from '../bridge/navigation';
 import { App as EncountersApp } from '../encounters/ui/App';
 import { App as LorekeeperApp } from '../lorekeeper/ui/App';
@@ -23,6 +24,9 @@ export function Shell() {
       </div>
       <div className="shell-tab" hidden={tab !== 'lorekeeper'}>
         <LorekeeperApp />
+      </div>
+      <div className="shell-tab" hidden={tab !== 'assistant'}>
+        <AssistantApp />
       </div>
     </>
   );

@@ -2,10 +2,13 @@
  * @file App entry point: loads global styles; on first start copies the
  * separate apps' data in and makes one campaign list; loads the campaigns and
  * both tabs' data, then renders the shell (or an error message if loading
- * fails) and connects the tabs.
+ * fails), connects the tabs, and starts answering AI apps.
  */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { startChats } from './assistant/chat/chats';
+import { startAssistantSettings } from './assistant/chat/settings';
+import { startAiConnection } from './assistant/connection';
 import { startTabs, useTabs } from './bridge/navigation';
 import { startCampaigns } from './campaigns/campaignStore';
 import { setErrorReporter } from './campaigns/errors';
@@ -47,7 +50,7 @@ async function load(): Promise<string | null> {
   await unifyCampaigns();
   // Both tabs load the open campaign, so the list comes first.
   const campaignsWarning = await startCampaigns();
-  await Promise.all([startTabs(), loadEncounters(), loadLorekeeper()]);
+  await Promise.all([startTabs(), loadEncounters(), loadLorekeeper(), startAssistantSettings(), startChats()]);
   if (campaignsWarning) useEncountersUi.getState().notify('error', campaignsWarning);
   return copied;
 }
@@ -69,6 +72,7 @@ load()
     startLoreRepair();
     startEncountersLinks();
     startLorekeeperLinks();
+    void startAiConnection();
   })
   .catch((err: Error) => {
     root.render(<p className="empty-state">Dungeon Books could not load its data: {err.message}</p>);

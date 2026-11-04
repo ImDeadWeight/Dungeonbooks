@@ -1,9 +1,19 @@
 //! Native shell shared by desktop and mobile: registers the plugins (files,
-//! dialogs, one window at a time on desktop) and starts the Tauri app that
-//! hosts the web UI.
+//! dialogs, HTTP for talking to AI models, one window at a time on desktop),
+//! the AI connection on desktop, and starts the Tauri app that hosts the web UI.
+
+#[cfg(desktop)]
+mod mcp;
+mod network;
 
 #[cfg(desktop)]
 use tauri::Manager;
+
+/// Desktop: `--mcp-stdio` runs as an AI app's tool server instead of the app (see mcp.rs). Returns the exit code.
+#[cfg(desktop)]
+pub fn run_mcp_stdio() -> i32 {
+    mcp::run_stdio()
+}
 
 /// Builds and runs the app. On mobile this is the platform entry point.
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -14,15 +24,34 @@ pub fn run() {
     // Android keeps one copy of an app by itself.
     #[cfg(desktop)]
     {
-        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.unminimize();
-                let _ = window.set_focus();
-            }
-        }));
+        builder = builder
+            .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+                if let Some(window) = app.get_webview_window("main") {
+                    let _ = window.unminimize();
+                    let _ = window.set_focus();
+                }
+            }))
+            .setup(|app| {
+                mcp::setup(app.handle());
+                Ok(())
+            })
+            .invoke_handler(tauri::generate_handler![
+                network::local_ipv4,
+                mcp::mcp_attach,
+                mcp::mcp_reply,
+                mcp::ai_connection_status,
+                mcp::ai_connection_set_enabled,
+                mcp::ai_connection_new_token,
+            ]);
+    }
+    // Mobile has no AI connection server, only the network lookup.
+    #[cfg(mobile)]
+    {
+        builder = builder.invoke_handler(tauri::generate_handler![network::local_ipv4]);
     }
     builder
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_dialog::init())
         .run(tauri::generate_context!())
         .expect("error while running Dungeon Books");

@@ -1,9 +1,10 @@
 /**
- * @file PostCSS plugin that keeps the two tabs' styles apart. Encounters and
+ * @file PostCSS plugin that keeps the tabs' styles apart. Encounters and
  * Lorekeeper were separate apps, so their stylesheets reuse class names
  * (.sidebar, .tree-row, …). Every rule in src/encounters gets the prefix
  * :root[data-tab="encounters"], every rule in src/lorekeeper gets
- * :root[data-tab="lorekeeper"], and the shared styles get :root[data-tab], so
+ * :root[data-tab="lorekeeper"] (and src/assistant, the Assistant tab's,
+ * :root[data-tab="assistant"]), and the shared styles get :root[data-tab], so
  * only the showing tab's rules apply (the shell sets data-tab on <html>).
  *
  * Every prefix weighs the same, so rules keep the strength they had against
@@ -13,7 +14,7 @@
 import type { AtRule, Plugin } from 'postcss';
 
 /** Folders under src/ whose styles belong to one tab. */
-const TABS = ['encounters', 'lorekeeper'];
+const TABS = ['encounters', 'lorekeeper', 'assistant'];
 /** Stylesheets left unprefixed. */
 const UNSCOPED = ['/src/styles/theme.css'];
 

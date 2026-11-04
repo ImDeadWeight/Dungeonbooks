@@ -1,0 +1,462 @@
+/* @file The Assistant tab: top bar, chat list, chat, the Models screen. */
+
+.app {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  /* Phones draw apps edge to edge: keep clear of the navigation bar and screen cutouts (0 on desktop). */
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.top-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.top-bar.title-bar {
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  height: 44px;
+  user-select: none;
+}
+
+.window-controls {
+  display: flex;
+  align-self: stretch;
+  margin-left: 4px;
+}
+
+.window-button {
+  width: 46px;
+  height: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.window-button:hover:not(:disabled) {
+  background: var(--panel-hover);
+}
+
+.window-button.close:hover:not(:disabled) {
+  background: var(--damage);
+}
+
+.spin {
+  animation: assistant-spin 1s linear infinite;
+}
+
+@keyframes assistant-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Layout ---- */
+
+.assistant-workspace {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 0;
+}
+
+.assistant-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+
+.assistant-list-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.assistant-list-actions button {
+  justify-content: flex-start;
+}
+
+.assistant-list-actions button.active {
+  background: var(--accent-soft);
+}
+
+/* Nothing connected yet: a dot on Models. */
+.assistant-dot {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-radius: 50%;
+  background: var(--resolve);
+}
+
+.assistant-chats {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.assistant-chat-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 6px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.assistant-chat-row:hover {
+  background: var(--panel-hover);
+}
+
+.assistant-chat-row.selected {
+  background: var(--accent-soft);
+}
+
+.assistant-chat-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-chat-row .icon {
+  visibility: hidden;
+}
+
+.assistant-chat-row:hover .icon,
+.assistant-chat-row.selected .icon {
+  visibility: visible;
+}
+
+.assistant-empty {
+  padding: 12px;
+}
+
+.assistant-main {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* ---- Chat ---- */
+
+.assistant-chat,
+.assistant-models {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.assistant-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.assistant-chat-header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.assistant-picker {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.assistant-picker select {
+  max-width: 260px;
+}
+
+.assistant-chat-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px max(16px, calc((100% - 760px) / 2));
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.assistant-message {
+  max-width: 100%;
+  line-height: 1.5;
+}
+
+.assistant-message.user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  white-space: pre-wrap;
+}
+
+.assistant-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.assistant-thinking {
+  color: var(--text-muted);
+}
+
+.assistant-call {
+  margin-top: 4px;
+}
+
+.assistant-call-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel);
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.assistant-call.failed .assistant-call-line {
+  border-color: var(--damage);
+}
+
+.assistant-call-line .open {
+  transform: rotate(90deg);
+}
+
+.assistant-call-result {
+  margin: 4px 0 0;
+  max-height: 240px;
+  overflow: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+/* A change waiting for Allow or Skip. */
+.assistant-pending {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--resolve);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.assistant-pending-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.assistant-pending dl {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.assistant-pending dl div {
+  display: flex;
+  gap: 8px;
+}
+
+.assistant-pending dt {
+  min-width: 110px;
+  color: var(--text-muted);
+}
+
+.assistant-pending dd {
+  margin: 0;
+}
+
+.assistant-pending-text {
+  margin: 0;
+  max-height: 280px;
+  overflow: auto;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.assistant-pending-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.assistant-pending-actions label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.assistant-error {
+  margin: 0;
+  color: var(--damage-hover);
+}
+
+.assistant-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px max(12px, calc((100% - 760px) / 2));
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.assistant-composer textarea {
+  flex: 1;
+  min-height: 44px;
+  max-height: 200px;
+  resize: vertical;
+  font: inherit;
+}
+
+/* ---- Models ---- */
+
+.assistant-models-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px max(16px, calc((100% - 760px) / 2)) 24px;
+}
+
+.assistant-models-body section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.assistant-models-body h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.assistant-models-body p {
+  margin: 0;
+}
+
+.assistant-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.assistant-server {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.assistant-server-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+.assistant-server-name {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assistant-server-name .muted {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.assistant-connected {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--heal-hover);
+}
+
+.assistant-searching {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.assistant-signin,
+.assistant-form-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.assistant-signin {
+  padding-left: 10px;
+}
+
+.assistant-signin input,
+.assistant-form-row input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.assistant-key-label {
+  min-width: 150px;
+}
+
+.assistant-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* ---- Phone: the list and the open chat take turns ---- */
+@media (max-width: 700px) {
+  .assistant-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .assistant-list {
+    border-right: none;
+  }
+
+  .top-bar .top-bar-label {
+    display: none;
+  }
+
+  .assistant-key-label {
+    min-width: 0;
+    width: 100%;
+  }
+}

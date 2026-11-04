@@ -63,6 +63,12 @@ interface NotebookState extends Notebook {
   addBox(pageId: Id, x: number, y: number): Id;
   updateBox(pageId: Id, boxId: Id, patch: Partial<Omit<TextBox, 'id'>>): void;
   setBoxContent(pageId: Id, boxId: Id, content: JSONContent): void;
+  /**
+   * Replaces a box's content from outside its editor (an AI app's edit): the
+   * box gets a new id in the same spot, so an open editor shows the new text.
+   * Returns the new id.
+   */
+  replaceBoxContent(pageId: Id, boxId: Id, content: JSONContent): Id;
   deleteBox(pageId: Id, boxId: Id): void;
 }
 
@@ -165,6 +171,12 @@ export const useNotebook = create<NotebookState>((set, get) => {
 
     setBoxContent(pageId, boxId, content) {
       updateBoxes(pageId, (boxes) => boxes.map((b) => (b.id === boxId ? { ...b, content } : b)));
+    },
+
+    replaceBoxContent(pageId, boxId, content) {
+      const id = newId();
+      updateBoxes(pageId, (boxes) => boxes.map((b) => (b.id === boxId ? { ...b, id, content } : b)));
+      return id;
     },
 
     deleteBox(pageId, boxId) {

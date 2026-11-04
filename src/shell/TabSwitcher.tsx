@@ -1,17 +1,18 @@
 /**
- * @file The Encounters / Lorekeeper switch at the start of each tab's top
- * bar, where each app showed its name.
+ * @file The Encounters / Lorekeeper / Assistant switch at the start of each
+ * tab's top bar, where each app showed its name.
  */
-import { BookOpen, Swords } from 'lucide-react';
+import { BookOpen, Bot, Swords } from 'lucide-react';
 import { showTab, useTabs, type Tab } from '../bridge/navigation';
 
 /** The tabs, in the order they're shown. */
 const TABS: { tab: Tab; label: string; Icon: typeof Swords }[] = [
   { tab: 'encounters', label: 'Encounters', Icon: Swords },
   { tab: 'lorekeeper', label: 'Lorekeeper', Icon: BookOpen },
+  { tab: 'assistant', label: 'Assistant', Icon: Bot },
 ];
 
-/** Two buttons; the showing tab's is highlighted. On a phone only the icons show. */
+/** A button per tab; the showing tab's is highlighted. On a phone only the icons show. */
 export function TabSwitcher() {
   const current = useTabs((s) => s.tab);
   return (
