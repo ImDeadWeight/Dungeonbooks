@@ -2,8 +2,11 @@
  * @file The app's side of the Model Context Protocol (MCP), which Claude and
  * other AI apps use to call tools. The native shell carries the messages
  * (JSON-RPC 2.0) between the AI app and here (see connection.ts); this
- * answers them: the handshake, the list of tools, and tool calls.
+ * answers them: the handshake, the list of tools, and tool calls. Changes
+ * that Settings don't allow AI apps to make are left out of the list and
+ * refused.
  */
+import { appPermission } from './chat/settings';
 import { NOTES_TOOLS, ToolError, type Tool } from './notesTools';
 
 /** Protocol versions this server speaks, newest first. */
@@ -25,8 +28,8 @@ Working well with the user's notes:
 - These are the user's notes: keep their wording and facts unless asked to change them, and say what you changed.
 There is no undo for changes made here, and nothing here deletes pages.`;
 
-/** Every tool, by name. */
-const TOOLS: Tool[] = NOTES_TOOLS;
+/** The tools AI apps may use right now. */
+const tools = (): Tool[] => NOTES_TOOLS.filter((t) => t.readOnly || appPermission(t.name) === 'allow');
 
 interface Request {
   jsonrpc: '2.0';
@@ -52,8 +55,12 @@ class RpcError extends Error {
 
 /** A tool call's result: its text, marked as an error when the call failed (so the AI can correct itself). */
 function callTool(params: Record<string, unknown> | undefined) {
-  const tool = TOOLS.find((t) => t.name === params?.name);
+  const tool = NOTES_TOOLS.find((t) => t.name === params?.name);
   if (!tool) throw new RpcError(INVALID_PARAMS, `Unknown tool: ${String(params?.name)}`);
+  if (!tools().includes(tool)) {
+    const text = `The user's settings in Dungeon Books don't let AI apps use ${tool.name}. They can change that in Settings → AI apps.`;
+    return { content: [{ type: 'text', text }], isError: true };
+  }
   const args = (params?.arguments ?? {}) as Record<string, unknown>;
   try {
     return { content: [{ type: 'text', text: tool.run(args) }], isError: false };
@@ -79,7 +86,7 @@ function answer(request: Request, version: string): unknown {
       return {};
     case 'tools/list':
       return {
-        tools: TOOLS.map((t) => ({
+        tools: tools().map((t) => ({
           name: t.name,
           title: t.title,
           description: t.description,

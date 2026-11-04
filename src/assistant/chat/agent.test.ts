@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCampaigns } from '../../campaigns/campaignStore';
 import { useNotebook } from '../../lorekeeper/state/notebookStore';
-import { sendMessage } from './agent';
+import { cleanTitle, sendMessage } from './agent';
 import { useChats } from './chats';
 import { useAssistantSettings } from './settings';
 
@@ -32,6 +32,7 @@ beforeEach(() => {
   useNotebook.getState().replaceAll({ folders: [], pages: [] });
   useNotebook.getState().addPage(null, 'Mira Thorne');
   useChats.setState({ chats: [], pending: null, error: null, runningChatId: null });
+  useAssistantSettings.setState({ permissions: { chat: {}, apps: {} } });
   chatId = useChats.getState().newChat('c1');
 });
 
@@ -85,7 +86,40 @@ describe('the assistant with an OpenAI-style server', () => {
     expect(useNotebook.getState().pages[0].boxes).toHaveLength(1);
   });
 
-  it('says so when the server is not running', async () => {
+  it('has the model name the chat after its first answer, and again a little later', async () => {
+    const answer = (text: string) => stream([{ choices: [{ delta: { content: text } }] }]);
+    const sent = fakeServer(answer('Mira is a smuggler.'), answer('**"Mira the Smuggler."**'));
+    await sendMessage(chatId, 'Who is Mira?');
+    expect(sent[1].body.tools).toBeUndefined();
+    expect((sent[1].body.messages as { content: string }[])[1].content).toContain('User: Who is Mira?');
+    expect(chat().title).toBe('Mira the Smuggler');
+
+    fakeServer(answer('She works the docks.'));
+    await sendMessage(chatId, 'Where?');
+    expect(chat().title).toBe('Mira the Smuggler');
+
+    const later = fakeServer(answer('At night.'), answer('Mira on the Docks'));
+    await sendMessage(chatId, 'When?');
+    expect(later).toHaveLength(2);
+    expect(chat().title).toBe('Mira on the Docks');
+  });
+
+    it('makes a change without asking when Settings allow it, and never offers one Settings forbid', async () => {
+    useAssistantSettings.getState().setChatPermission('add_text', 'allow');
+    useAssistantSettings.getState().setChatPermission('replace_text', 'never');
+    const sent = fakeServer(
+      stream([{ choices: [{ delta: { tool_calls: [{ index: 0, id: 'c', function: { name: 'add_text', arguments: '{"page":"Mira Thorne","text":"A smuggler."}' } }] } }] }]),
+      stream([{ choices: [{ delta: { content: 'Done.' } }] }]),
+    );
+    await sendMessage(chatId, 'Add that she is a smuggler');
+    expect(useChats.getState().pending).toBeNull();
+    expect(useNotebook.getState().pages[0].boxes).toHaveLength(1);
+    const offered = (sent[0].body.tools as { function: { name: string } }[]).map((t) => t.function.name);
+    expect(offered).toContain('add_text');
+    expect(offered).not.toContain('replace_text');
+  });
+
+    it('says so when the server is not running', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Promise.reject(new TypeError('connection refused'))));
     await sendMessage(chatId, 'Hello');
     expect(useChats.getState().error).toBe("Couldn't reach Ollama at http://127.0.0.1:11434. Is it running?");
@@ -119,5 +153,13 @@ describe('the assistant with Anthropic', () => {
     expect(assistant.content.map((b) => b.type)).toEqual(['text', 'tool_use']);
     expect(results).toMatchObject({ role: 'user', content: [{ type: 'tool_result', tool_use_id: 'tu1' }] });
     expect(chat().messages[chat().messages.length - 1]).toMatchObject({ text: 'One page.' });
+  });
+});
+
+describe('chat titles from the model', () => {
+  it('drops thinking, quotes, Markdown and a "Title:" label', () => {
+    expect(cleanTitle('<think>The user asks about factions.</think>\n\nTitle: "Faction Politics"')).toBe('Faction Politics');
+    expect(cleanTitle('## *The Everstorm Hook.*\nMore words')).toBe('The Everstorm Hook');
+    expect(cleanTitle('<think>still going')).toBe('');
   });
 });

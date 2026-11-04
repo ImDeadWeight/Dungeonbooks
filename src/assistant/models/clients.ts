@@ -157,7 +157,7 @@ async function anthropicChat(req: ChatRequest): Promise<ChatReply> {
     stream: true,
     system: req.system,
     messages: anthropicMessages(req.messages),
-    tools: req.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })),
+    ...(req.tools.length ? { tools: req.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.parameters })) } : {}),
   };
   const response = await send(`${req.connection.baseUrl}/v1/messages`, req.connection, body, req.signal);
   let text = '';

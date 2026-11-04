@@ -13,6 +13,7 @@ import { useAssistantSettings } from '../chat/settings';
 import { listModels } from '../models/clients';
 import type { ChatMessage, ToolCall, ToolResult } from '../models/types';
 import { NOTES_TOOLS } from '../notesTools';
+import { MarkdownText } from './MarkdownText';
 
 const isChange = (call: ToolCall) => !NOTES_TOOLS.find((t) => t.name === call.name)?.readOnly;
 
@@ -97,7 +98,7 @@ function Messages({ chat }: { chat: Chat }) {
           </div>
         ) : (
           <div key={i} className="assistant-message model">
-            {m.text && <div className="assistant-text">{m.text}</div>}
+            {m.text && <MarkdownText text={m.text} campaignId={chat.campaignId} />}
             {m.toolCalls.map((call) => (
               <CallLine key={call.id} call={call} result={results.get(call.id)} />
             ))}
@@ -216,7 +217,13 @@ export function ChatView({ back, showModels }: { back?: () => void; showModels: 
             <Messages chat={chat} />
             {streaming !== null && (
               <div className="assistant-message model">
-                <div className="assistant-text">{streaming || <span className="assistant-thinking">Thinking…</span>}</div>
+                {streaming ? (
+                  <MarkdownText text={streaming} campaignId={chat.campaignId} />
+                ) : (
+                  <div className="assistant-text">
+                    <span className="assistant-thinking">Thinking…</span>
+                  </div>
+                )}
               </div>
             )}
             <PendingCard chat={chat} />

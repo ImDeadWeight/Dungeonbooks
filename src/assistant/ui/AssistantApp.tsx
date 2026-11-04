@@ -9,6 +9,7 @@ import { useActiveCampaign } from '../../campaigns/campaignStore';
 import { hasCustomTitleBar } from '../../platform';
 import { usePhoneLayout } from '../../lorekeeper/ui/common/usePhoneLayout';
 import { AiConnectButton } from '../../shell/AiConnect';
+import { SettingsButton } from '../../shell/Settings';
 import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
 import { WindowControls } from '../../shell/WindowControls';
@@ -31,6 +32,7 @@ function TopBar() {
       <CampaignMenu />
       <span className="spacer" {...drag} />
       <AiConnectButton />
+      <SettingsButton />
       {customTitleBar && <WindowControls />}
     </header>
   );

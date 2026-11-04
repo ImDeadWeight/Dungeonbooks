@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useNotebook } from '../lorekeeper/state/notebookStore';
+import { useAssistantSettings } from './chat/settings';
 import { handleMcpBody } from './mcpServer';
 
 let nextId = 1;
@@ -16,7 +17,10 @@ function call(name: string, args: object = {}) {
 
 const page = (title: string) => useNotebook.getState().pages.find((p) => p.title === title)!;
 
-beforeEach(() => useNotebook.getState().replaceAll({ folders: [], pages: [] }));
+beforeEach(() => {
+  useNotebook.getState().replaceAll({ folders: [], pages: [] });
+  useAssistantSettings.setState({ permissions: { chat: {}, apps: {} } });
+});
 
 describe('MCP server', () => {
   it('does the handshake and lists tools', () => {
@@ -25,6 +29,17 @@ describe('MCP server', () => {
     expect(init.instructions).toContain('[[Page Title]]');
     expect(handleMcpBody(JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }), '1.0')).toBe('');
     expect(send('tools/list').tools.map((t: { name: string }) => t.name)).toContain('create_page');
+  });
+
+  it('hides and refuses changes Settings forbid AI apps', () => {
+    useAssistantSettings.getState().setAppPermission('create_page', 'never');
+    const names = send('tools/list').tools.map((t: { name: string }) => t.name);
+    expect(names).not.toContain('create_page');
+    expect(names).toContain('add_text');
+    const [text, isError] = call('create_page', { title: 'Mira Thorne' });
+    expect(isError).toBe(true);
+    expect(text).toContain('Settings');
+    expect(useNotebook.getState().pages).toEqual([]);
   });
 
   it('answers unknown methods with an error', () => {

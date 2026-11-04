@@ -1,11 +1,13 @@
 /**
- * @file The top application bar: the tab switch, the campaign menu and an
- * Import button. On desktop it is also the window title bar.
+ * @file The top application bar: the tab switch, the campaign menu, and
+ * Import, Connect AI and Settings buttons. On desktop it is also the window
+ * title bar.
  */
 import { Upload } from 'lucide-react';
 import { hasCustomTitleBar } from '../../platform';
 import { importNotebook } from '../state/notebooks';
 import { AiConnectButton } from '../../shell/AiConnect';
+import { SettingsButton } from '../../shell/Settings';
 import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
 import { WindowControls } from '../../shell/WindowControls';
@@ -29,6 +31,7 @@ export function TopBar() {
         <Upload size={16} /> <span className="top-bar-label">Import</span>
       </button>
       <AiConnectButton />
+      <SettingsButton />
       {customTitleBar && <WindowControls />}
     </header>
   );

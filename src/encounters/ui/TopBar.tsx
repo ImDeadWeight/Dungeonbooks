@@ -1,13 +1,14 @@
 /**
  * @file The top application bar: the tab switch, the campaign menu, then
- * Import, Backup, Characters, Conditions and Connect AI buttons. On desktop it
- * is also the window title bar.
+ * Import, Backup, Characters, Conditions, Connect AI and Settings buttons. On
+ * desktop it is also the window title bar.
  */
 import { Download, Upload, Users } from 'lucide-react';
 import { hasCustomTitleBar } from '../../platform';
 import { exportItems, startImport } from '../state/transferActions';
 import { useUi } from '../state/uiStore';
 import { AiConnectButton } from '../../shell/AiConnect';
+import { SettingsButton } from '../../shell/Settings';
 import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
 import { WindowControls } from '../../shell/WindowControls';
@@ -42,6 +43,7 @@ export function TopBar() {
         <HealingIcon size={16} /> Conditions
       </button>
       <AiConnectButton />
+      <SettingsButton />
       {customTitleBar && <WindowControls />}
     </header>
   );

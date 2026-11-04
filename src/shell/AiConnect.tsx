@@ -1,10 +1,11 @@
 /**
- * @file The Connect AI button and dialog (desktop app): switches AI
- * connections on or off and gives the setup to paste into Claude Desktop,
- * Claude Code and other apps that speak MCP.
+ * @file Connecting AI apps (desktop app): the Connect AI button, which opens
+ * Settings at AI apps, and that section's switch for AI connections and the
+ * setup to paste into Claude Desktop, Claude Code and other apps that speak
+ * MCP.
  */
 import { Bot, Check, Copy, RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   aiConnectionsAvailable,
   newConnectionToken,
@@ -13,7 +14,7 @@ import {
   useAiConnection,
   type ConnectionStatus,
 } from '../assistant/connection';
-import { Modal } from '../ui/Modal';
+import { openSettings } from './settingsDialog';
 import './aiConnect.css';
 
 /** A block of setup text with a copy button. */
@@ -73,52 +74,46 @@ function Setup({ status }: { status: ConnectionStatus }) {
   );
 }
 
-/** The Connect AI dialog. */
-function AiConnectDialog({ close }: { close: () => void }) {
+/** Settings → AI apps: switching connections on or off, then `children` (what they may change), then the setup. */
+export function AiAppsSettings({ children }: { children: ReactNode }) {
   const status = useAiConnection((s) => s.status);
   useEffect(() => void refreshStatus(), []);
 
   return (
-    <Modal title="Connect AI" size="medium" onClose={close} footer={<button onClick={close}>Done</button>}>
-      <div className="ai-connect">
-        <p>
-          Lets AI apps like Claude work with the open campaign's notes: read and search pages, create pages, add or
-          replace text, change pages' details and link mentions. They can't delete pages, and there is no undo for
-          their changes.
-        </p>
-        {status && (
-          <>
-            <label className="ai-toggle">
-              <input type="checkbox" checked={status.enabled} onChange={(e) => void setConnectionsEnabled(e.target.checked)} />
-              Let AI apps connect
-            </label>
-            {status.error ? (
-              <p className="ai-error">{status.error}</p>
-            ) : (
-              <p className="muted">{status.running ? `On: listening on this computer only (port ${status.port}).` : 'Off.'}</p>
-            )}
-            <Setup status={status} />
-          </>
-        )}
-      </div>
-    </Modal>
+    <div className="ai-connect">
+      <p>
+        Lets AI apps like Claude work with the open campaign's notes: read and search pages, and make the changes
+        allowed below. They can't delete pages, and there is no undo for their changes.
+      </p>
+      {status && (
+        <>
+          <label className="ai-toggle">
+            <input type="checkbox" checked={status.enabled} onChange={(e) => void setConnectionsEnabled(e.target.checked)} />
+            Let AI apps connect
+          </label>
+          {status.error ? (
+            <p className="ai-error">{status.error}</p>
+          ) : (
+            <p className="muted">{status.running ? `On: listening on this computer only (port ${status.port}).` : 'Off.'}</p>
+          )}
+        </>
+      )}
+      {children}
+      {status && <Setup status={status} />}
+    </div>
   );
 }
 
-/** Top bar button that opens the dialog (desktop app only). */
+/** Top bar button that opens Settings at AI apps (desktop app only). */
 export function AiConnectButton() {
-  const [open, setOpen] = useState(false);
   const enabled = useAiConnection((s) => s.status?.enabled);
   useEffect(() => {
     if (aiConnectionsAvailable()) void refreshStatus();
   }, []);
   if (!aiConnectionsAvailable()) return null;
   return (
-    <>
-      <button className={`ai-connect-button${enabled ? ' on' : ''}`} title="Let AI apps like Claude work with your notes" onClick={() => setOpen(true)}>
-        <Bot size={16} /> <span className="top-bar-label">Connect AI</span>
-      </button>
-      {open && <AiConnectDialog close={() => setOpen(false)} />}
-    </>
+    <button className={`ai-connect-button${enabled ? ' on' : ''}`} title="Let AI apps like Claude work with your notes" onClick={() => openSettings('ai-apps')}>
+      <Bot size={16} /> <span className="top-bar-label">Connect AI</span>
+    </button>
   );
 }

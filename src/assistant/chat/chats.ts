@@ -8,7 +8,7 @@ import type { ChatMessage, ToolCall } from '../models/types';
 import { assistantDocuments } from './settings';
 
 const CHATS_DOC = 'chats';
-/** Characters of the first message used as a new chat's title. */
+/** Characters of the first message used as a new chat's title, until the model names it. */
 const TITLE_LENGTH = 48;
 
 /** One chat. */
@@ -22,6 +22,8 @@ export interface Chat {
   messages: ChatMessage[];
   /** The user said changes need no asking for the rest of this chat. */
   allowChanges?: boolean;
+  /** How many of the user's messages there were when the model last named the chat. */
+  titledAt?: number;
 }
 
 /** A change the model wants to make, waiting for Allow or Skip. */
@@ -46,7 +48,7 @@ interface ChatsState {
   open(id: string | null): void;
   /** Adds a message to a chat (the first user message also names it). */
   append(chatId: string, message: ChatMessage): void;
-  update(chatId: string, changes: Partial<Pick<Chat, 'title' | 'allowChanges'>>): void;
+  update(chatId: string, changes: Partial<Pick<Chat, 'title' | 'allowChanges' | 'titledAt'>>): void;
   remove(id: string): void;
 }
 

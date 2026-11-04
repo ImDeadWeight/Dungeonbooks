@@ -1,0 +1,107 @@
+/* @file The Settings dialog: section tabs on the left (on top on a phone), permission rows. */
+
+.settings {
+  display: flex;
+  gap: 16px;
+  min-height: 0;
+}
+
+.settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 0 0 140px;
+}
+
+.settings-tabs button {
+  justify-content: flex-start;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.settings-tabs button.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.settings-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-section p {
+  margin: 0;
+}
+
+.settings-section h3 {
+  margin: 12px 0 0;
+  font-size: 15px;
+}
+
+.settings-section > h3:first-child {
+  margin-top: 0;
+}
+
+.settings-permissions {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.settings-permission {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
+.settings-permission + .settings-permission {
+  border-top: 1px solid var(--border);
+}
+
+.settings-permission.all {
+  font-weight: 600;
+  background: var(--panel-raised);
+}
+
+/* A segmented control, like the tab switch. */
+.settings-choices {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.settings-choices button {
+  padding: 3px 10px;
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.settings-choices button.active {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+@media (max-width: 700px) {
+  .settings {
+    flex-direction: column;
+  }
+
+  .settings-tabs {
+    flex: none;
+    flex-direction: row;
+  }
+}
