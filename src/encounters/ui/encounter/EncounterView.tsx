@@ -42,7 +42,7 @@ export function EncounterView() {
   if (!encounter) {
     return (
       <main className="panel main-panel">
-        <p className="empty-state">Select an encounter from the sidebar, or create one with the + button.</p>
+        <p className="empty-state">Select an encounter from the sidebar, or create one with the sidebar's + button.</p>
       </main>
     );
   }

@@ -2,6 +2,7 @@
  * @file The collapsible left panel: nested folders and pages, with drag and
  * drop to reorganise them and a search box to narrow them down.
  */
+import { folderAsMarkdown } from '../../../assistant/notesMarkdown';
 import { DndContext, MouseSensor, TouchSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { FilePlus, Folder, FolderOpen, FolderPlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useMemo } from 'react';
@@ -119,6 +120,7 @@ function FolderNode({ folder, depth }: { folder: FolderModel; depth: number }) {
         onAddPage={() => createPage(folder.id)}
         onAddFolder={() => createFolder(folder.id)}
         onSetPageType={() => useUi.getState().setPageTypeFolder(folder.id)}
+        copyMarkdown={() => folderAsMarkdown(folder.id)}
         onDelete={() => confirmDeleteFolder(folder)}
         onRename={(name) => useNotebook.getState().renameFolder(folder.id, name)}
       />

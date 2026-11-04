@@ -190,15 +190,16 @@ function trailingWords(text: string): Word[] {
 
 /**
  * The page name typed words fit, as a run of the name's words: the typed
- * words equal the name's, except the last, which only has to start it.
- * Returns where in the name the run starts and the matched last word.
+ * words equal the name's, except the last, which only has to start it
+ * (unless `wholeLast`). Returns where in the name the run starts and the
+ * matched last word.
  */
-function fitInName(typed: Word[], nameWords: Word[]): { at: number; word: Word }[] {
+function fitInName(typed: Word[], nameWords: Word[], wholeLast = false): { at: number; word: Word }[] {
   const fits: { at: number; word: Word }[] = [];
   for (let at = 0; at + typed.length <= nameWords.length; at++) {
     const ok = typed.every((t, k) => {
       const nw = nameWords[at + k];
-      return k === typed.length - 1 ? nw.lower.startsWith(t.lower) : nw.lower === t.lower;
+      return k === typed.length - 1 && !wholeLast ? nw.lower.startsWith(t.lower) : nw.lower === t.lower;
     });
     if (ok) fits.push({ at, word: nameWords[at + typed.length - 1] });
   }
@@ -258,6 +259,48 @@ export function completionAt(text: string, pages: SearchablePage[], context: Sea
   const [best, next] = candidates;
   if (next && next.pageId !== best.pageId && compare(best, next) === 0) return null;
   return { pageId: best.pageId, from: best.from, rest: best.rest };
+}
+
+/**
+ * What the words just before the caret (the end of `text`) mention, for Tab
+ * when no completion shows. A whole page name (title or alias, a plural
+ * counts) gives that page; failing that, whole words of exactly one page's
+ * name give that page ("Mira" for "Mira Thorne"). Several pages fitting, or
+ * a word that only starts a name, give `pageId: null`: the writer picks from
+ * a list. More typed words win over fewer. `from` is where the mention starts.
+ */
+export function mentionBefore(text: string, pages: SearchablePage[], context: SearchContext): { pageId: Id | null; from: number } | null {
+  const typed = trailingWords(text);
+  const current = typed[typed.length - 1];
+  if (!current) return null;
+  const others = pages.filter((p) => p.pageId !== context.currentPageId);
+  const nameWordsOf = (p: SearchablePage) => [p.title, ...p.aliases].map(words);
+  const singular = (w: Word): Word => ({ ...w, lower: w.lower.replace(/e?s$/, '') });
+  // A lone common word ("the") is never a mention, though names start with it.
+  const usable = (run: Word[]) => run.length > 1 || !COMMON_WORDS.has(run[0].lower);
+  const answer = (found: Set<Id>, from: number) => ({ pageId: found.size === 1 ? [...found][0] : null, from });
+
+  for (let span = typed.length; span >= 1; span--) {
+    const run = typed.slice(typed.length - span);
+    if (!usable(run)) continue;
+    const plural = [...run.slice(0, -1), singular(run[run.length - 1])];
+    const exact = new Set(
+      others
+        .filter((p) => nameWordsOf(p).some((nw) => nw.length === span && [run, plural].some((r) => fitInName(r, nw, true).some((f) => f.at === 0))))
+        .map((p) => p.pageId),
+    );
+    if (exact.size) return answer(exact, run[0].index);
+  }
+  for (const wholeLast of [true, false]) {
+    for (let span = typed.length; span >= 1; span--) {
+      const run = typed.slice(typed.length - span);
+      if (!usable(run)) continue;
+      const fits = new Set(others.filter((p) => nameWordsOf(p).some((nw) => fitInName(run, nw, wholeLast).length)).map((p) => p.pageId));
+      // Only part of a word typed: finishing it takes a choice, even with one page.
+      if (fits.size) return wholeLast ? answer(fits, run[0].index) : { pageId: null, from: run[0].index };
+    }
+  }
+  return null;
 }
 
 /**

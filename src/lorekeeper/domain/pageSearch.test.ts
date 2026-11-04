@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { completionAt, prefixDistance, restOfWordIn, searchPages, type SearchablePage, type SearchContext } from './pageSearch';
+import { completionAt, mentionBefore, prefixDistance, restOfWordIn, searchPages, type SearchablePage, type SearchContext } from './pageSearch';
 
 const page = (pageId: string, title: string, extra: Partial<SearchablePage> = {}): SearchablePage => ({
   pageId,
@@ -101,6 +101,45 @@ describe('completion', () => {
 
   it('stays quiet when the text does not end in a word', () => {
     expect(complete('everst ')).toBeNull();
+  });
+});
+
+describe('the mention before the caret (Tab)', () => {
+  /** [mention, page] for some typed text; page null means "pick from a list". */
+  const mention = (text: string) => {
+    const m = mentionBefore(text, pages, context);
+    return m && [text.slice(m.from), m.pageId];
+  };
+
+  it('links a whole title or alias, plurals included', () => {
+    expect(mention('We met Mira Thorne')).toEqual(['Mira Thorne', 'mira']);
+    expect(mention('ask Thorny')).toEqual(['Thorny', 'mira']);
+    expect(mention('two Veiled Markets')).toEqual(['Veiled Markets', 'market']);
+  });
+
+  it('prefers the longer name', () => {
+    expect(mention('the Thalamar Imperium')).toEqual(['the Thalamar Imperium', 'imperium']);
+    expect(mention('met Thalamar')).toEqual(['Thalamar', 'thalamar']);
+  });
+
+  it("links a page by whole words of its name when only it fits", () => {
+    expect(mention('We met Mira')).toEqual(['Mira', 'mira']);
+    expect(mention('the Everstorm')).toEqual(['the Everstorm', 'storm']);
+  });
+
+  it('asks when several pages fit or a word is only started', () => {
+    // "Veil" is a whole word only of "Veil Cult" ("Veiled Market" has "Veiled").
+    expect(mention('the Veil')).toEqual(['Veil', 'cult']);
+    const talbots = [page('fort', 'Fort Talbot'), page('mill', 'Talbot Mill')];
+    const m = mentionBefore('near Talbot', talbots, context);
+    expect(m).toEqual({ pageId: null, from: 5 });
+    expect(mention('Ve')).toEqual(['Ve', null]);
+  });
+
+  it('ignores common words and text not ending in a word', () => {
+    expect(mention('the')).toBeNull();
+    expect(mention('Mira ')).toBeNull();
+    expect(mention('nobody here')).toBeNull();
   });
 });
 

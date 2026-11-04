@@ -1,10 +1,12 @@
 /**
- * @file One row of the sidebar tree: chevron, icon, name (rename with the
- * pencil or a double-click), inline action buttons, drag and drop.
+ * @file One row of the sidebar tree: chevron, icon, name (rename from the ⋯
+ * menu or with a double-click), a folder's New page button, the ⋯ menu of
+ * actions, drag and drop.
  */
 import { useDraggable, useDroppable } from '@dnd-kit/core';
-import { ChevronDown, ChevronRight, FilePlus, FolderPlus, Pencil, Shapes, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, ClipboardCopy, FilePlus, FolderPlus, Pencil, Shapes, Trash2 } from 'lucide-react';
 import { useState, type CSSProperties, type ReactNode } from 'react';
+import { MoreMenu, type MenuItem } from '../common/MoreMenu';
 import { accepts, useDropZone, type DragItem, type DropTarget } from './dnd';
 import { Highlighted } from './SidebarSearch';
 
@@ -28,7 +30,7 @@ export function TreeChildren({ parentDepth, children }: { parentDepth: number; c
   );
 }
 
-/** Props for TreeRow; optional handlers decide which buttons appear. */
+/** Props for TreeRow; optional handlers decide which actions its menu has. */
 interface Props {
   depth: number;
   label: string;
@@ -44,13 +46,15 @@ interface Props {
   onAddFolder?: () => void;
   /** Folders: set the type of every page inside. */
   onSetPageType?: () => void;
+  /** Folders: everything inside as Markdown, for Copy as Markdown. */
+  copyMarkdown?: () => string;
   onDelete: () => void;
   onRename: (name: string) => void;
 }
 
 /** One line of the sidebar tree. */
 export function TreeRow(props: Props) {
-  const { depth, label, icon, drag, drop, expanded, onToggle, selected, onSelect, onAddPage, onAddFolder, onSetPageType, onDelete, onRename } =
+  const { depth, label, icon, drag, drop, expanded, onToggle, selected, onSelect, onAddPage, onAddFolder, onSetPageType, copyMarkdown, onDelete, onRename } =
     props;
   const [editing, setEditing] = useState(false);
   const draggable = useDraggable({ id: `drag:${drag.type}:${drag.id}`, data: drag, disabled: editing });
@@ -66,6 +70,18 @@ export function TreeRow(props: Props) {
     draggable.setNodeRef(el);
     droppable.setNodeRef(el);
   };
+
+  // The row's actions, in its ⋯ menu; which appear depends on the handlers given.
+  const menu: MenuItem[] = [
+    { label: 'Rename', icon: Pencil, onSelect: () => setEditing(true) },
+    ...(onAddPage ? [{ label: 'New page here', icon: FilePlus, onSelect: onAddPage }] : []),
+    ...(onAddFolder ? [{ label: 'New folder here', icon: FolderPlus, onSelect: onAddFolder }] : []),
+    ...(onSetPageType ? [{ label: 'Set page type inside…', icon: Shapes, onSelect: onSetPageType }] : []),
+    ...(copyMarkdown
+      ? [{ label: 'Copy as Markdown', icon: ClipboardCopy, doneLabel: 'Copied', onSelect: () => navigator.clipboard.writeText(copyMarkdown()) }]
+      : []),
+    { label: 'Delete…', icon: Trash2, danger: true, onSelect: onDelete },
+  ];
 
   // Finish inline renaming; ignores blank or unchanged names.
   const commit = (value: string) => {
@@ -107,27 +123,13 @@ export function TreeRow(props: Props) {
         </span>
       )}
       <span className="tree-actions">
-        <button className="icon" title="Rename" onClick={(e) => { e.stopPropagation(); setEditing(true); }}>
-          <Pencil size={15} />
-        </button>
+        {/* The one action common enough to keep on the row as well. */}
         {onAddPage && (
-          <button className="icon" title="New page here" onClick={(e) => { e.stopPropagation(); onAddPage(); }}>
+          <button className="icon" title="New page here" onPointerDown={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onAddPage(); }}>
             <FilePlus size={15} />
           </button>
         )}
-        {onAddFolder && (
-          <button className="icon" title="New folder here" onClick={(e) => { e.stopPropagation(); onAddFolder(); }}>
-            <FolderPlus size={15} />
-          </button>
-        )}
-        {onSetPageType && (
-          <button className="icon" title="Set page type for everything inside" onClick={(e) => { e.stopPropagation(); onSetPageType(); }}>
-            <Shapes size={15} />
-          </button>
-        )}
-        <button className="icon" title="Delete" onClick={(e) => { e.stopPropagation(); onDelete(); }}>
-          <Trash2 size={15} />
-        </button>
+        <MoreMenu items={menu} title="Actions" />
       </span>
     </div>
   );

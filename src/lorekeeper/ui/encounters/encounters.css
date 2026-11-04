@@ -46,11 +46,6 @@
   outline: 2px solid var(--accent);
 }
 
-/* Page header button. */
-.link-encounter-button {
-  padding: 3px 10px;
-}
-
 /* Picker. */
 .link-encounter-picker {
   display: flex;

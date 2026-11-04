@@ -1,6 +1,6 @@
 [package]
 name = "dungeon-books"
-version = "0.1.0"
+version = "0.2.0"
 description = "Encounters and Lorekeeper in one app: encounter builder, initiative tracker and hyperlinked campaign notes for tabletop RPGs"
 edition = "2021"
 
@@ -17,7 +17,12 @@ tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tauri-plugin-http = "2"
 
-# Desktop only: Android and iOS keep a single copy of an app themselves.
+# Desktop only: Android and iOS keep a single copy of an app themselves; AI apps connect on desktop
+# (tiny_http serves them, ureq relays for --mcp-stdio, getrandom makes the connection token).
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-single-instance = "2"
+tiny_http = "0.12"
+ureq = { version = "2", default-features = false }
+getrandom = "0.2"

@@ -27,7 +27,7 @@ let cached: { key: string; matcher: TitleMatcher } | null = null;
  * edited (a page never suggests linking to itself). Titles come first, so a
  * title wins over another page's alias.
  */
-function matcherFor(currentPageId: Id): TitleMatcher {
+export function mentionMatcher(currentPageId: Id): TitleMatcher {
   const others = useNotebook.getState().pages.filter((p) => p.id !== currentPageId);
   const candidates = [
     ...others.map((p) => ({ pageId: p.id, title: p.title })),
@@ -68,7 +68,7 @@ function suggestionButton(pageId: Id, title: string, matched: string) {
 function buildDecorations(doc: PmNode, currentPageId: Id): DecorationSet {
   const pages = useNotebook.getState().pages;
   const titles = new Map(pages.map((p) => [p.id, p.title]));
-  const matcher = matcherFor(currentPageId);
+  const matcher = mentionMatcher(currentPageId);
   const decorations: Decoration[] = [];
 
   doc.descendants((node, pos) => {

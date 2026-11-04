@@ -277,6 +277,12 @@ p.statblock-sync {
   user-select: none;
 }
 
+/* The page the grey completion links to, when it isn't just the finished words. */
+.link-ghost-target {
+  font-size: 0.85em;
+  opacity: 0.75;
+}
+
 .link-picker-query {
   text-decoration: underline solid var(--accent);
   text-underline-offset: 3px;

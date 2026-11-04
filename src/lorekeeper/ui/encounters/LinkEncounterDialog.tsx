@@ -1,6 +1,6 @@
 /**
- * @file The Link encounter button and picker: a searchable list of the open
- * campaign's encounters. Picking
+ * @file The Link encounter picker (from the page bar's ⋯ menu): a searchable
+ * list of the open campaign's encounters. Picking
  * one puts an encounter chip where the caret last was on this page, or in a
  * new box when no box on the page has been used yet.
  */
@@ -39,27 +39,8 @@ function placeEncounterLink(pageId: Id, encounter: LinkEncounter) {
   useUi.getState().setFocusBox(boxId);
 }
 
-/** The page header's Link encounter button. */
-export function LinkEncounterButton({ pageId }: { pageId: Id }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button
-        className="link-encounter-button"
-        title="Link one of this campaign's encounters"
-        // Keep the caret in the box being written in.
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setOpen(true)}
-      >
-        <Swords size={15} /> Link encounter
-      </button>
-      {open && <LinkEncounterDialog pageId={pageId} close={() => setOpen(false)} />}
-    </>
-  );
-}
-
 /** Searchable list of the campaign's encounters. */
-function LinkEncounterDialog({ pageId, close }: { pageId: Id; close: () => void }) {
+export function LinkEncounterDialog({ pageId, close }: { pageId: Id; close: () => void }) {
   const catalog = useOpenNotebookCatalog();
   const [query, setQuery] = useState('');
   const q = query.trim().toLowerCase();

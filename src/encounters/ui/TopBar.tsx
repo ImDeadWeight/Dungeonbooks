@@ -1,12 +1,13 @@
 /**
  * @file The top application bar: the tab switch, the campaign menu, then
- * Create (+), Import, Backup, Characters and Conditions buttons. On desktop it is also the window
- * title bar.
+ * Import, Backup, Characters, Conditions and Connect AI buttons. On desktop it
+ * is also the window title bar.
  */
-import { Download, Plus, Upload, Users } from 'lucide-react';
+import { Download, Upload, Users } from 'lucide-react';
 import { hasCustomTitleBar } from '../../platform';
 import { exportItems, startImport } from '../state/transferActions';
 import { useUi } from '../state/uiStore';
+import { AiConnectButton } from '../../shell/AiConnect';
 import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
 import { WindowControls } from '../../shell/WindowControls';
@@ -27,9 +28,6 @@ export function TopBar() {
     <header className={`top-bar${customTitleBar ? ' title-bar' : ''}`} {...drag}>
       <TabSwitcher />
       <CampaignMenu />
-      <button className="primary" title="Create…" onClick={() => openModal({ type: 'create', preset: { kind: null } })}>
-        <Plus size={20} />
-      </button>
       <span className="spacer" {...drag} />
       <button title="Import from a file" onClick={startImport}>
         <Upload size={16} /> Import
@@ -43,6 +41,7 @@ export function TopBar() {
       <button title="Create and edit conditions" onClick={() => openModal({ type: 'conditions' })}>
         <HealingIcon size={16} /> Conditions
       </button>
+      <AiConnectButton />
       {customTitleBar && <WindowControls />}
     </header>
   );

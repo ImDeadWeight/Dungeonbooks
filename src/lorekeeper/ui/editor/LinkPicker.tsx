@@ -11,7 +11,7 @@ import type { Id } from '../../domain/ids';
 import { isPhoneLayout } from '../../../platform';
 import { useNotebook } from '../../state/notebookStore';
 import { PageTypeIcon } from '../page/pageTypes';
-import { acceptGhost, acceptItem, autocompleteState, pickerItems, selectItem } from './linkAutocomplete';
+import { acceptGhost, acceptItem, autocompleteState, ghostTarget, pickerItems, selectItem } from './linkAutocomplete';
 
 /** Width of the list (px), and the room it needs below the caret before it opens above instead. */
 const WIDTH = 300;
@@ -82,6 +82,7 @@ export function LinkPicker({ editor, pageId }: { editor: Editor; pageId: Id }) {
   if (s?.ghost && isPhoneLayout()) {
     const { ghost } = s;
     const word = editor.state.doc.textBetween(ghost.from, ghost.to) + ghost.rest;
+    const target = ghostTarget(editor.state, ghost);
     const at = editor.view.coordsAtPos(ghost.from);
     return createPortal(
       <button
@@ -95,6 +96,7 @@ export function LinkPicker({ editor, pageId }: { editor: Editor; pageId: Id }) {
       >
         <Link2 size={14} />
         {word}
+        {target && <span className="link-ghost-target">→ {target}</span>}
       </button>,
       document.body,
     );

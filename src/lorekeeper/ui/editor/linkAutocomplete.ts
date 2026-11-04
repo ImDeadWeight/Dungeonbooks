@@ -1,18 +1,28 @@
 /**
  * @file Link autocomplete. While typing, when the words just typed start the
- * name of one page, the rest of the word shows in grey after the caret; Tab
- * finishes the word and links the mention to that page (Escape hides it).
- * Typing [[ or pressing Ctrl+Space opens the link picker instead: a list of
- * pages that fit the words so far (typos forgiven), ending with a row that
- * creates a page by that name. Ctrl+Space with text selected links the
- * selection as it is. The list itself is drawn by LinkPicker.tsx.
+ * name of one page, the rest of the word shows in grey after the caret (with
+ * the page it links to); Tab finishes the word and links the mention to that
+ * page (Escape hides it). With no grey text, Tab links the name just typed
+ * ("Mira" for "Mira Thorne"), or lists the pages when several fit.
+ *
+ * Finishing a page's exact name (title or alias) with a space or punctuation
+ * links it by itself, the first time that page is mentioned on the page;
+ * Backspace straight after takes the link off again (and the name isn't
+ * linked by itself again in that box).
+ *
+ * Typing [[ or @ or pressing Ctrl+Space opens the link picker: a list of pages
+ * that fit the words so far (typos forgiven), ending with a row that creates a
+ * page by that name. Ctrl+Space with text selected links the selection as it
+ * is. The list itself is drawn by LinkPicker.tsx.
  */
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey, TextSelection, type EditorState, type Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet, type EditorView } from '@tiptap/pm/view';
 import type { Id } from '../../domain/ids';
+import type { JSONContent } from '@tiptap/core';
 import {
   completionAt,
+  mentionBefore,
   restOfWordIn,
   searchablePages,
   searchPages,
@@ -22,6 +32,7 @@ import {
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { isPhoneLayout } from '../../../platform';
+import { mentionMatcher } from './linkSuggestions';
 import { PAGE_LINK } from './pageLink';
 
 /** The grey rest of a word, offered after the caret. */
@@ -35,14 +46,17 @@ export interface Ghost {
 }
 
 /**
- * The open link picker. `brackets`: opened by typing [[ at `from`; the search
- * is what follows, and picking replaces it all with the page's name. `words`:
+ * The open link picker. `trigger`: opened by typing `trigger` ([[ or @) at
+ * `from`; the search is what follows, and picking replaces it all with the
+ * page's name. `words`:
  * opened with Ctrl+Space; the search is the words from `from` to the caret,
  * which picking finishes and links (or replaces, when they only fit with
  * typos). `selection`: opened with text selected; picking links it as it is.
  */
 export interface Picker {
-  mode: 'brackets' | 'words' | 'selection';
+  mode: 'trigger' | 'words' | 'selection';
+  /** What opened a trigger picker. */
+  trigger?: string;
   from: number;
   /** End of the selection (selection mode only; otherwise the caret is the end). */
   to: number;
@@ -58,12 +72,31 @@ interface AutocompleteState {
   picker: Picker | null;
   /** Start of a mention whose completion was dismissed with Escape: not offered again while typing it. */
   dismissedFrom: number | null;
+  /** A name just linked by itself, until the next keystroke (Backspace then takes the link off). */
+  autoLinked: AutoLinked | null;
 }
 
-type Action = { type: 'open'; picker: Picker } | { type: 'select'; index: number } | { type: 'close' } | { type: 'dismissGhost' };
+/** A name linked by itself: the link's range, the page, and where the caret was. */
+interface AutoLinked {
+  from: number;
+  to: number;
+  pageId: Id;
+  caret: number;
+}
+
+type Action =
+  | { type: 'open'; picker: Picker }
+  | { type: 'select'; index: number }
+  | { type: 'close' }
+  | { type: 'dismissGhost' }
+  | { type: 'autoLinked'; link: AutoLinked };
 
 const pluginKey = new PluginKey<AutocompleteState>('linkAutocomplete');
 
+/** What opens the picker when typed (@ only at the start of a word, so email addresses don't). */
+const TRIGGERS = ['[[', '@'];
+/** Typed after a name, these link it by itself. */
+const NAME_END = /[\s.,;:!?)\]"'’]/u;
 /** The longest search the picker keeps open for (past this, [[ was probably just text). */
 const MAX_QUERY = 60;
 const WORD_CHAR = /[\p{L}\p{N}]/u;
@@ -117,8 +150,8 @@ function ghostFor(state: EditorState, pageId: Id): Ghost | null {
 /** The picker's search text. */
 export function pickerQuery(state: EditorState, picker: Picker): string {
   switch (picker.mode) {
-    case 'brackets':
-      return state.doc.textBetween(picker.from + 2, state.selection.from);
+    case 'trigger':
+      return state.doc.textBetween(picker.from + picker.trigger!.length, state.selection.from);
     case 'words':
       return state.doc.textBetween(picker.from, state.selection.from);
     case 'selection':
@@ -152,20 +185,55 @@ function followPicker(picker: Picker, tr: Transaction, state: EditorState): Pick
   }
   if (!selection.empty) return null;
   const caret = selection.from;
-  const searchStart = next.from + (next.mode === 'brackets' ? 2 : 0);
+  const searchStart = next.from + (next.mode === 'trigger' ? next.trigger!.length : 0);
   if (caret < searchStart || next.from > state.doc.content.size || !state.doc.resolve(next.from).sameParent(selection.$from)) return null;
-  if (next.mode === 'brackets' && state.doc.textBetween(next.from, next.from + 2) !== '[[') return null;
+  if (next.mode === 'trigger' && state.doc.textBetween(next.from, searchStart) !== next.trigger) return null;
   const query = state.doc.textBetween(searchStart, caret);
   if (query.length > MAX_QUERY || query.includes(']]')) return null;
+  // "@ " was just an at sign.
+  if (next.trigger === '@' && /^\s/.test(query)) return null;
   return next;
 }
 
-/** A picker for [[ just typed (not a third [ in a row). */
-function bracketPicker(state: EditorState): Picker | null {
+/** A picker for [[ or @ just typed (not a third [ in a row; not @ inside a word, as in an email address). */
+function triggerPicker(state: EditorState): Picker | null {
   const before = textBeforeCaret(state)?.text ?? '';
-  if (!before.endsWith('[[') || before.endsWith('[[[')) return null;
-  const from = state.selection.from - 2;
-  return { mode: 'brackets', from, to: from, selected: 0 };
+  const trigger = TRIGGERS.find((t) => before.endsWith(t));
+  if (!trigger) return null;
+  const preceding = before.slice(0, -trigger.length).slice(-1);
+  if (trigger === '[[' && preceding === '[') return null;
+  if (trigger === '@' && WORD_CHAR.test(preceding)) return null;
+  const from = state.selection.from - trigger.length;
+  return { mode: 'trigger', trigger, from, to: from, selected: 0 };
+}
+
+/** True when the page's text (its other boxes as saved, and this box as it is now) already links to a page. */
+function pageLinksTo(state: EditorState, pageId: Id, target: Id): boolean {
+  const linksIn = (node: JSONContent): boolean =>
+    !!node.marks?.some((m) => m.type === PAGE_LINK && m.attrs?.pageId === target) || (node.content ?? []).some(linksIn);
+  let found = false;
+  state.doc.descendants((node) => {
+    if (node.marks.some((m) => m.type.name === PAGE_LINK && m.attrs.pageId === target)) found = true;
+    return !found;
+  });
+  const page = useNotebook.getState().pages.find((p) => p.id === pageId);
+  return found || !!page?.boxes.some((b) => linksIn(b.content));
+}
+
+/**
+ * After typing a space or punctuation: the exact page name just before it,
+ * if that page isn't linked anywhere on the page yet (and wasn't unlinked by
+ * Backspace in this box).
+ */
+function nameToAutoLink(state: EditorState, pageId: Id, declined: Set<Id>): { from: number; to: number; pageId: Id } | null {
+  const before = textBeforeCaret(state);
+  if (!before || before.text.length < 2 || !NAME_END.test(before.text.slice(-1))) return null;
+  const text = before.text.slice(0, -1);
+  const match = mentionMatcher(pageId)
+    .find(text)
+    .find((m) => m.to === text.length);
+  if (!match || declined.has(match.pageId) || pageLinksTo(state, pageId, match.pageId)) return null;
+  return { from: before.start + match.from, to: before.start + match.to, pageId: match.pageId };
 }
 
 /** Links [from, to) to a page, puts the caret after it and closes the autocomplete. */
@@ -207,7 +275,7 @@ export function acceptItem(view: EditorView, pageId: Id, item: PickerItem) {
   let end: number;
   if (picker.mode === 'selection') {
     end = picker.to;
-  } else if (picker.mode === 'brackets') {
+  } else if (picker.mode === 'trigger') {
     tr.insertText(name, picker.from, caret);
     end = picker.from + name.length;
   } else {
@@ -256,12 +324,40 @@ function openPicker(view: EditorView): boolean {
   return true;
 }
 
-/** The grey completion after the caret; clicking (tapping) it accepts it. */
-function ghostWidget(rest: string) {
+/** The page a completion links to, when the finished words aren't simply its title. */
+export function ghostTarget(state: EditorState, ghost: Ghost): string | null {
+  const title = useNotebook.getState().pages.find((p) => p.id === ghost.pageId)?.title;
+  const finished = state.doc.textBetween(ghost.from, ghost.to) + ghost.rest;
+  return title && finished.trim().toLowerCase() !== title.trim().toLowerCase() ? title : null;
+}
+
+/** Tab with no grey text: links the name just typed, or lists the pages when several fit. */
+function linkNameBeforeCaret(view: EditorView, pageId: Id): boolean {
+  const before = textBeforeCaret(view.state);
+  if (!before?.text) return false;
+  const mention = mentionBefore(before.text, searchablePages(useNotebook.getState().pages), searchContext(pageId));
+  if (!mention) return false;
+  const from = before.start + mention.from;
+  if (mention.pageId) {
+    view.dispatch(link(view.state.tr, from, view.state.selection.from, mention.pageId));
+  } else {
+    view.dispatch(view.state.tr.setMeta(pluginKey, { type: 'open', picker: { mode: 'words', from, to: from, selected: 0 } } satisfies Action));
+  }
+  return true;
+}
+
+/** The grey completion after the caret (and the page it links to, faintly); clicking (tapping) it accepts it. */
+function ghostWidget(rest: string, target: string | null) {
   return (view: EditorView) => {
     const span = document.createElement('span');
     span.className = 'link-ghost';
     span.textContent = rest;
+    if (target) {
+      const label = document.createElement('span');
+      label.className = 'link-ghost-target';
+      label.textContent = ` → ${target}`;
+      span.appendChild(label);
+    }
     span.title = 'Tab to finish and link';
     span.contentEditable = 'false';
     span.addEventListener('mousedown', (e) => e.preventDefault());
@@ -290,28 +386,32 @@ export const LinkAutocomplete = Extension.create<Options>({
 
   addProseMirrorPlugins() {
     const pageId = this.options.pageId;
+    /** Pages whose automatic link was taken off with Backspace in this box: not linked by themselves again. */
+    const declined = new Set<Id>();
     return [
       new Plugin<AutocompleteState>({
         key: pluginKey,
         state: {
-          init: () => ({ ghost: null, picker: null, dismissedFrom: null }),
+          init: () => ({ ghost: null, picker: null, dismissedFrom: null, autoLinked: null }),
           apply(tr, prev, oldState, state) {
             const action = tr.getMeta(pluginKey) as Action | undefined;
             const dismissedFrom = prev.dismissedFrom === null ? null : tr.mapping.map(prev.dismissedFrom);
             switch (action?.type) {
               case 'close':
-                return { ghost: null, picker: null, dismissedFrom };
+                return { ghost: null, picker: null, dismissedFrom, autoLinked: null };
               case 'dismissGhost':
-                return { ghost: null, picker: prev.picker, dismissedFrom: prev.ghost?.from ?? dismissedFrom };
+                return { ...prev, ghost: null, dismissedFrom: prev.ghost?.from ?? dismissedFrom, autoLinked: null };
               case 'open':
-                return { ghost: null, picker: action.picker, dismissedFrom };
+                return { ghost: null, picker: action.picker, dismissedFrom, autoLinked: null };
               case 'select':
                 return prev.picker ? { ...prev, picker: { ...prev.picker, selected: action.index } } : prev;
+              case 'autoLinked':
+                return { ghost: null, picker: null, dismissedFrom, autoLinked: action.link };
             }
 
             // Only typing (the text grew) offers anything new; deleting or moving the caret just takes it away.
             const typed = tr.docChanged && state.doc.content.size > oldState.doc.content.size;
-            const picker = (prev.picker && followPicker(prev.picker, tr, state)) ?? (typed ? bracketPicker(state) : null);
+            const picker = (prev.picker && followPicker(prev.picker, tr, state)) ?? (typed ? triggerPicker(state) : null);
             let ghost: Ghost | null = null;
             if (!picker && typed) {
               ghost = ghostFor(state, pageId);
@@ -319,8 +419,23 @@ export const LinkAutocomplete = Extension.create<Options>({
             } else if (!picker && !tr.docChanged && tr.selection.eq(oldState.selection)) {
               ghost = prev.ghost;
             }
-            return { ghost, picker, dismissedFrom };
+            return { ghost, picker, dismissedFrom, autoLinked: null };
           },
+        },
+
+        // A page name finished with a space or punctuation links by itself (see the file comment).
+        appendTransaction(transactions, oldState, state) {
+          const typedOneCharacter =
+            transactions.some((tr) => tr.docChanged) &&
+            !transactions.some((tr) => tr.getMeta('uiEvent') === 'paste' || tr.getMeta(pluginKey)) &&
+            state.doc.content.size === oldState.doc.content.size + 1 &&
+            state.selection.empty;
+          if (!typedOneCharacter || pluginKey.getState(state)?.picker) return null;
+          const found = nameToAutoLink(state, pageId, declined);
+          if (!found) return null;
+          const mark = state.schema.marks[PAGE_LINK].create({ pageId: found.pageId });
+          const link: AutoLinked = { ...found, caret: state.selection.from };
+          return state.tr.addMark(found.from, found.to, mark).setMeta(pluginKey, { type: 'autoLinked', link } satisfies Action);
         },
         props: {
           decorations(state) {
@@ -329,8 +444,14 @@ export const LinkAutocomplete = Extension.create<Options>({
             // On a phone the completion shows above the text instead (LinkPicker): a widget in the word being
             // composed would upset the keyboard.
             if (s?.ghost && !isPhoneLayout()) {
+              const target = ghostTarget(state, s.ghost);
               decorations.push(
-                Decoration.widget(s.ghost.to, ghostWidget(s.ghost.rest), { side: 1, marks: [], ignoreSelection: true, key: `ghost:${s.ghost.rest}` }),
+                Decoration.widget(s.ghost.to, ghostWidget(s.ghost.rest, target), {
+                  side: 1,
+                  marks: [],
+                  ignoreSelection: true,
+                  key: `ghost:${s.ghost.rest}:${target}`,
+                }),
               );
             }
             if (s?.picker) {
@@ -368,8 +489,20 @@ export const LinkAutocomplete = Extension.create<Options>({
             }
 
             if (event.ctrlKey && (event.key === ' ' || event.code === 'Space')) return openPicker(view);
-            if (s.ghost && event.key === 'Tab' && plain && !event.shiftKey) {
-              acceptGhost(view);
+            if (event.key === 'Tab' && plain && !event.shiftKey) {
+              if (s.ghost) {
+                acceptGhost(view);
+                return true;
+              }
+              // Nothing to link: Tab does what it usually does (indenting a list item).
+              return linkNameBeforeCaret(view, pageId);
+            }
+            // Backspace straight after a name linked itself: take the link off, keep the text.
+            const auto = s.autoLinked;
+            if (auto && event.key === 'Backspace' && plain && view.state.selection.empty && view.state.selection.from === auto.caret) {
+              declined.add(auto.pageId);
+              const type = view.state.schema.marks[PAGE_LINK];
+              view.dispatch(view.state.tr.removeMark(auto.from, auto.to, type).setMeta(pluginKey, { type: 'close' } satisfies Action));
               return true;
             }
             if (s.ghost && event.key === 'Escape') {

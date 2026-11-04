@@ -39,7 +39,8 @@
     min-height: 44px;
   }
 
-  .link-picker-row {
+  .link-picker-row,
+  .more-menu-item {
     min-height: 44px;
   }
 
