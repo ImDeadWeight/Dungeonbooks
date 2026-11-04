@@ -6,7 +6,7 @@
  * is the clear answer).
  */
 import type { Id } from './ids';
-import { pageType, type Page, type PageType } from './notebook';
+import { pageParentId, pageType, type Page, type PageType } from './notebook';
 
 /** What the search knows about one page. */
 export interface SearchablePage {
@@ -49,7 +49,7 @@ export interface Completion {
 
 /** The searchable view of the notebook's pages. */
 export function searchablePages(pages: Page[]): SearchablePage[] {
-  return pages.map((p) => ({ pageId: p.id, title: p.title, aliases: p.aliases ?? [], type: pageType(p), folderId: p.folderId }));
+  return pages.map((p) => ({ pageId: p.id, title: p.title, aliases: p.aliases ?? [], type: pageType(p), folderId: pageParentId(p) }));
 }
 
 /** A word and where it starts. Apostrophes inside a word ("Ka'rn") keep it whole. */

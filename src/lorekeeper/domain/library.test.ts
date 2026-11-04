@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { exportFileName, exportText, parseNotebookFile } from './library';
 import { createEmptyStatBlock } from 'campaign-link/formats/dnd5e/statBlock';
-import type { Notebook } from './notebook';
+import { NOTEBOOK_FORMAT, type Notebook } from './notebook';
 
 const notebook: Notebook = {
+  format: NOTEBOOK_FORMAT,
   folders: [{ id: 'f1', name: 'Factions', parentId: null }],
   pages: [
     {
@@ -61,6 +62,37 @@ describe('reading notebook files', () => {
     expect(read.pages[0].folderId).toBeNull();
     expect(read.folders.some((f) => f.parentId === null)).toBe(true);
   });
+
+  it('moves pages under missing pages, and page loops, to the top level', () => {
+    const tangled: Notebook = {
+      format: NOTEBOOK_FORMAT,
+      folders: [{ id: 'f', name: 'F', parentId: null }],
+      pages: [
+        { id: 'a', title: 'A', folderId: null, parentPageId: 'b', boxes: [] },
+        { id: 'b', title: 'B', folderId: null, parentPageId: 'a', boxes: [] },
+        { id: 'c', title: 'C', folderId: null, parentPageId: 'gone', boxes: [] },
+        { id: 'd', title: 'D', folderId: 'f', parentPageId: 'c', boxes: [] },
+      ],
+    };
+    const pages = Object.fromEntries(parseNotebookFile(exportText('x', tangled), 'x').notebook.pages.map((p) => [p.id, p]));
+    expect([pages.a, pages.b].filter((p) => !p.parentPageId)).toHaveLength(1);
+    expect(pages.c.parentPageId).toBeUndefined();
+    expect(pages.d).toMatchObject({ parentPageId: 'c', folderId: null });
+  });
+
+  it('upgrades a notebook exported before child pages', () => {
+    const old = {
+      folders: [{ id: 'v', name: 'Vaultrock', parentId: null }],
+      pages: [
+        { id: 'vp', title: 'Vaultrock', folderId: 'v', boxes: [] },
+        { id: 'pit', title: 'Gladiator Pit', folderId: 'v', boxes: [] },
+      ],
+    };
+    const read = parseNotebookFile(JSON.stringify({ format: 'lorekeeper-notebook', version: 1, name: 'Old', notebook: old }), 'x').notebook;
+    expect(read.format).toBe(NOTEBOOK_FORMAT);
+    expect(read.folders).toEqual([]);
+    expect(read.pages.find((p) => p.id === 'pit')?.parentPageId).toBe('vp');
+  });
 });
 
 describe('reading page types', () => {
@@ -73,6 +105,7 @@ describe('reading page types', () => {
         { id: 'c', title: 'C', folderId: null, boxes: [], info: { type: 'place', parentPlaceId: 'gone' } },
         { id: 'd', title: 'D', folderId: null, boxes: [], info: { type: 'character', kind: 'pc' } },
         { id: 'e', title: 'E', folderId: null, boxes: [], info: { type: 'spaceship' } },
+        { id: 'f', title: 'F', folderId: null, boxes: [], info: { type: 'character', kind: 'npc', belongsTo: ['a', 'd', 'gone', 'a', 7] } },
       ],
     };
     const { notebook: read } = parseNotebookFile(exportText('x', typed as unknown as Notebook), 'x');
@@ -81,6 +114,8 @@ describe('reading page types', () => {
     expect(info.c).toEqual({ type: 'place', parentPlaceId: null });
     expect(info.d).toEqual({ type: 'character', kind: 'pc' });
     expect(info.e).toBeUndefined();
+    // Only to places and factions that exist, once each.
+    expect(info.f).toEqual({ type: 'character', kind: 'npc', belongsTo: ['a'] });
   });
 });
 

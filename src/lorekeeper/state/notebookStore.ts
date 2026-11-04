@@ -1,6 +1,6 @@
 /**
- * @file Notebook store: folders, pages and text boxes, with every edit the UI
- * can make. Saved to notebook.json by persistence.ts.
+ * @file Notebook store: folders, pages (and pages under pages) and text boxes,
+ * with every edit the UI can make. Saved to notebook.json by persistence.ts.
  */
 import type { JSONContent } from '@tiptap/core';
 import type { SharedStatBlock } from 'campaign-link';
@@ -8,8 +8,12 @@ import { create } from 'zustand';
 import { newId, type Id } from '../domain/ids';
 import {
   canMoveFolder,
+  canNestPage,
   descendantFolderIds,
+  descendantPageIds,
   emptyNotebook,
+  isGroup,
+  pagesInFolders,
   placeFolder,
   type Notebook,
   type Page,
@@ -23,14 +27,25 @@ function withInfo(page: Page, info: PageInfo | undefined): Page {
   return info ? { ...rest, info } : rest;
 }
 
-/** Places inside a page that no longer exists (or is no longer a place) move to the top of the place tree. */
+/**
+ * After pages are deleted or change type: places inside a page that is no
+ * longer a place move to the top of the place tree, and characters stop
+ * belonging to pages that are no longer places or factions.
+ */
 function dropDanglingParents(pages: Page[]): Page[] {
   const places = new Set(pages.filter((p) => p.info?.type === 'place').map((p) => p.id));
-  return pages.map((p) =>
-    p.info?.type === 'place' && p.info.parentPlaceId && !places.has(p.info.parentPlaceId)
-      ? withInfo(p, { ...p.info, parentPlaceId: null })
-      : p,
-  );
+  const groups = new Set(pages.filter(isGroup).map((p) => p.id));
+  return pages.map((p) => {
+    if (p.info?.type === 'place' && p.info.parentPlaceId && !places.has(p.info.parentPlaceId)) {
+      return withInfo(p, { ...p.info, parentPlaceId: null });
+    }
+    if (p.info?.type === 'character' && p.info.belongsTo?.some((id) => !groups.has(id))) {
+      const { belongsTo, ...rest } = p.info;
+      const kept = belongsTo.filter((id) => groups.has(id));
+      return withInfo(p, kept.length ? { ...rest, belongsTo: kept } : rest);
+    }
+    return p;
+  });
 }
 
 /** Title given to new pages until the user names them. */
@@ -41,24 +56,30 @@ const NEW_BOX_WIDTH = 360;
 /** Notebook data plus its actions. */
 interface NotebookState extends Notebook {
   /** Replaces everything (used when loading). */
-  replaceAll(notebook: Notebook): void;
+  replaceAll(notebook: Pick<Notebook, 'folders' | 'pages'>): void;
   addFolder(parentId: Id | null, name?: string): Id;
   renameFolder(id: Id, name: string): void;
   /** Moves a folder to the end of another folder (or the top level). Ignored when the move would put a folder inside itself. */
   moveFolder(id: Id, parentId: Id | null): void;
   /** Puts a folder at `index` among the folders in `parentId`. Ignored when the move would put a folder inside itself. */
   placeFolder(id: Id, parentId: Id | null, index: number): void;
-  /** Deletes the folder with every folder and page inside it. */
+  /** Deletes the folder with every folder and page inside it (and the pages under those). */
   deleteFolder(id: Id): void;
   addPage(folderId: Id | null, title?: string): Id;
+  /** Adds a page under another page. */
+  addChildPage(parentPageId: Id, title?: string): Id;
   renamePage(id: Id, title: string): void;
   /** Sets a page's other names (none removes them). */
   setPageAliases(id: Id, aliases: string[]): void;
+  /** Moves a page into a folder (or the top level), taking the pages under it along. */
   movePage(id: Id, folderId: Id | null): void;
+  /** Puts a page under another page. Ignored when the move would put a page under itself. */
+  nestPage(id: Id, parentPageId: Id): void;
   /** Sets what pages describe (undefined makes them plain notes). */
   setPageInfo(ids: Id[], info: (current: PageInfo | undefined) => PageInfo | undefined): void;
   /** Gives a page a stat block, or removes it (undefined). */
   setPageStatBlock(id: Id, statBlock: SharedStatBlock | undefined): void;
+  /** Deletes the page with every page under it. */
   deletePage(id: Id): void;
   addBox(pageId: Id, x: number, y: number): Id;
   updateBox(pageId: Id, boxId: Id, patch: Partial<Omit<TextBox, 'id'>>): void;
@@ -109,15 +130,22 @@ export const useNotebook = create<NotebookState>((set, get) => {
 
     deleteFolder(id) {
       const doomed = new Set([id, ...descendantFolderIds(get().folders, id)]);
+      const doomedPages = new Set(pagesInFolders(get().pages, doomed));
       set((s) => ({
         folders: s.folders.filter((f) => !doomed.has(f.id)),
-        pages: dropDanglingParents(s.pages.filter((p) => !p.folderId || !doomed.has(p.folderId))),
+        pages: dropDanglingParents(s.pages.filter((p) => !doomedPages.has(p.id))),
       }));
     },
 
     addPage(folderId, title = NEW_PAGE_TITLE) {
       const id = newId();
       set((s) => ({ pages: [...s.pages, { id, title, folderId, boxes: [] }] }));
+      return id;
+    },
+
+    addChildPage(parentPageId, title = NEW_PAGE_TITLE) {
+      const id = newId();
+      set((s) => ({ pages: [...s.pages, { id, title, folderId: null, parentPageId, boxes: [] }] }));
       return id;
     },
 
@@ -136,7 +164,18 @@ export const useNotebook = create<NotebookState>((set, get) => {
     },
 
     movePage(id, folderId) {
-      set((s) => ({ pages: s.pages.map((p) => (p.id === id ? { ...p, folderId } : p)) }));
+      set((s) => ({
+        pages: s.pages.map((p) => {
+          if (p.id !== id) return p;
+          const { parentPageId: _old, ...rest } = p;
+          return { ...rest, folderId };
+        }),
+      }));
+    },
+
+    nestPage(id, parentPageId) {
+      if (!canNestPage(get().pages, id, parentPageId)) return;
+      set((s) => ({ pages: s.pages.map((p) => (p.id === id ? { ...p, folderId: null, parentPageId } : p)) }));
     },
 
     setPageInfo(ids, info) {
@@ -155,7 +194,8 @@ export const useNotebook = create<NotebookState>((set, get) => {
     },
 
     deletePage(id) {
-      set((s) => ({ pages: dropDanglingParents(s.pages.filter((p) => p.id !== id)) }));
+      const doomed = new Set([id, ...descendantPageIds(get().pages, id)]);
+      set((s) => ({ pages: dropDanglingParents(s.pages.filter((p) => !doomed.has(p.id))) }));
     },
 
     addBox(pageId, x, y) {

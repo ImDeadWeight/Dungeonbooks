@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   byFolderOrder,
+  canNestPage,
+  descendantPageIds,
   filterTree,
+  groupOptions,
+  groupsOf,
+  membersOf,
+  pagesInFolders,
   isEmptyContent,
   descendantPlaceIds,
   infoForType,
@@ -135,5 +141,57 @@ describe('sidebar search', () => {
   it('matches parts of names across folders and pages', () => {
     expect(visible('ar')).toEqual(['c', 'harbor', 'mira']);
     expect(visible('zzz')).toEqual([]);
+  });
+});
+
+describe('pages under pages', () => {
+  // Vaultrock (in folder v) holds The Mines, which holds Shaft 3. Harbor is at the top level.
+  const tree: Page[] = [
+    { id: 'vaultrock', title: 'Vaultrock', folderId: 'v', boxes: [] },
+    { id: 'mines', title: 'The Mines', folderId: null, parentPageId: 'vaultrock', boxes: [] },
+    { id: 'shaft', title: 'Shaft 3', folderId: null, parentPageId: 'mines', boxes: [] },
+    { id: 'harbor', title: 'Harbor', folderId: null, boxes: [] },
+  ];
+
+  it('finds every page under a page', () => {
+    expect(descendantPageIds(tree, 'vaultrock')).toEqual(['mines', 'shaft']);
+    expect(pagesInFolders(tree, new Set(['v'])).sort()).toEqual(['mines', 'shaft', 'vaultrock']);
+  });
+
+  it("won't put a page under itself", () => {
+    expect(canNestPage(tree, 'vaultrock', 'shaft')).toBe(false);
+    expect(canNestPage(tree, 'vaultrock', 'vaultrock')).toBe(false);
+    expect(canNestPage(tree, 'shaft', 'harbor')).toBe(true);
+  });
+
+  it('searches through pages, opening the ones above a match', () => {
+    const filter = filterTree(folders, tree, 'shaft')!;
+    expect([...filter.visible].sort()).toEqual(['mines', 'p', 'shaft', 'v', 'vaultrock']);
+    expect([...filter.opened].sort()).toEqual(['mines', 'p', 'v', 'vaultrock']);
+  });
+
+  it('shows everything under a matching page', () => {
+    expect([...filterTree(folders, tree, 'mines')!.visible].sort()).toEqual(['mines', 'p', 'shaft', 'v', 'vaultrock']);
+  });
+});
+
+describe('where characters belong', () => {
+  const pages: Page[] = [
+    page('Vaultrock', { type: 'place', parentPlaceId: null }),
+    page('Blood Clan', { type: 'faction' }),
+    page('Mask', { type: 'item' }),
+    page('Bongo', { type: 'character', kind: 'npc', belongsTo: ['Vaultrock', 'Mask'] }),
+    page('Danny', { type: 'character', kind: 'npc', belongsTo: ['Vaultrock', 'Blood Clan'] }),
+  ];
+  const titles = (list: Page[]) => list.map((p) => p.title);
+
+  it('lists the places and factions a character belongs to, ignoring other pages', () => {
+    expect(titles(groupsOf(pages, pages[3]))).toEqual(['Vaultrock']);
+    expect(titles(groupOptions(pages, pages[3]))).toEqual(['Blood Clan']);
+  });
+
+  it("lists a place's characters", () => {
+    expect(titles(membersOf(pages, 'Vaultrock'))).toEqual(['Bongo', 'Danny']);
+    expect(titles(membersOf(pages, 'Blood Clan'))).toEqual(['Danny']);
   });
 });

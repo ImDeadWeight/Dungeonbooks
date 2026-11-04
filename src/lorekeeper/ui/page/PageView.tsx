@@ -1,6 +1,7 @@
 /**
  * @file The open page: its title, type and (for characters) the encounters
- * they're in and the stat block panel, and a canvas where clicking any empty
+ * they're in and the stat block panel, (for places and factions) the
+ * characters belonging there, and a canvas where clicking any empty
  * spot starts a new text box there (OneNote style).
  */
 import { useEffect, useRef, useState, type MouseEvent } from 'react';
@@ -9,6 +10,7 @@ import { NEW_PAGE_TITLE, useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { CharacterEncounters } from '../encounters/CharacterEncounters';
 import { usePhoneLayout } from '../common/usePhoneLayout';
+import { GroupMembers } from './PageGroups';
 import { PageInfoBar } from './PageInfoBar';
 import { StatBlockPanel } from './StatBlockPanel';
 import { TextBoxView } from './TextBoxView';
@@ -96,6 +98,7 @@ export function PageView() {
         <PageTitle key={page.id} page={page} />
         <PageInfoBar page={page} />
         {page.info?.type === 'character' && <CharacterEncounters page={page} />}
+        <GroupMembers page={page} />
       </div>
       <div className="page-body">
         <div className="page-scroll">

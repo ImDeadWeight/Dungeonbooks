@@ -36,17 +36,19 @@ interface Props {
   label: string;
   icon: ReactNode;
   drag: DragItem;
-  /** Folders accept drops; pages don't. */
+  /** Folders accept pages and folders; pages accept pages. */
   drop?: DropTarget;
   expanded?: boolean;
   onToggle?: () => void;
   selected?: boolean;
   onSelect?: () => void;
   onAddPage?: () => void;
+  /** Pages: a new page under this one (in the ⋯ menu only). */
+  onAddChildPage?: () => void;
   onAddFolder?: () => void;
   /** Folders: set the type of every page inside. */
   onSetPageType?: () => void;
-  /** Folders: everything inside as Markdown, for Copy as Markdown. */
+  /** Folders, and pages with pages under them: everything inside as Markdown, for Copy as Markdown. */
   copyMarkdown?: () => string;
   onDelete: () => void;
   onRename: (name: string) => void;
@@ -54,7 +56,7 @@ interface Props {
 
 /** One line of the sidebar tree. */
 export function TreeRow(props: Props) {
-  const { depth, label, icon, drag, drop, expanded, onToggle, selected, onSelect, onAddPage, onAddFolder, onSetPageType, copyMarkdown, onDelete, onRename } =
+  const { depth, label, icon, drag, drop, expanded, onToggle, selected, onSelect, onAddPage, onAddChildPage, onAddFolder, onSetPageType, copyMarkdown, onDelete, onRename } =
     props;
   const [editing, setEditing] = useState(false);
   const draggable = useDraggable({ id: `drag:${drag.type}:${drag.id}`, data: drag, disabled: editing });
@@ -75,6 +77,7 @@ export function TreeRow(props: Props) {
   const menu: MenuItem[] = [
     { label: 'Rename', icon: Pencil, onSelect: () => setEditing(true) },
     ...(onAddPage ? [{ label: 'New page here', icon: FilePlus, onSelect: onAddPage }] : []),
+    ...(onAddChildPage ? [{ label: 'New page under this one', icon: FilePlus, onSelect: onAddChildPage }] : []),
     ...(onAddFolder ? [{ label: 'New folder here', icon: FolderPlus, onSelect: onAddFolder }] : []),
     ...(onSetPageType ? [{ label: 'Set page type inside…', icon: Shapes, onSelect: onSetPageType }] : []),
     ...(copyMarkdown

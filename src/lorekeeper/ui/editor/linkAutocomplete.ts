@@ -29,6 +29,7 @@ import {
   type PageResult,
   type SearchContext,
 } from '../../domain/pageSearch';
+import { pageParentId } from '../../domain/notebook';
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { isPhoneLayout } from '../../../platform';
@@ -109,7 +110,7 @@ export function autocompleteState(state: EditorState): AutocompleteState | undef
 /** What ranks the results: the page being edited, its folder, and the pages opened lately. */
 function searchContext(pageId: Id): SearchContext {
   const page = useNotebook.getState().pages.find((p) => p.id === pageId);
-  return { currentPageId: pageId, folderId: page?.folderId ?? null, recentPageIds: useUi.getState().recentPageIds };
+  return { currentPageId: pageId, folderId: page ? pageParentId(page) : null, recentPageIds: useUi.getState().recentPageIds };
 }
 
 /**
@@ -262,8 +263,11 @@ export function acceptItem(view: EditorView, pageId: Id, item: PickerItem) {
   let target: Id;
   let name: string;
   if (item.kind === 'create') {
-    const folderId = useNotebook.getState().pages.find((p) => p.id === pageId)?.folderId ?? null;
-    target = useNotebook.getState().addPage(folderId, item.title);
+    // Beside the page being written on: in its folder, or under the same page.
+    const here = useNotebook.getState().pages.find((p) => p.id === pageId);
+    target = here?.parentPageId
+      ? useNotebook.getState().addChildPage(here.parentPageId, item.title)
+      : useNotebook.getState().addPage(here?.folderId ?? null, item.title);
     name = item.title;
   } else {
     target = item.result.pageId;

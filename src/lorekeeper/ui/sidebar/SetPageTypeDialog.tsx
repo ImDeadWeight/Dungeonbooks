@@ -3,7 +3,7 @@
  * sub-folders too), e.g. making a whole "Characters" folder into NPCs.
  */
 import { useState } from 'react';
-import { descendantFolderIds, infoForType, PAGE_TYPES, type CharacterKind, type PageType } from '../../domain/notebook';
+import { descendantFolderIds, infoForType, PAGE_TYPES, pagesInFolders, type CharacterKind, type PageType } from '../../domain/notebook';
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 import { Modal } from '../../../ui/Modal';
@@ -24,13 +24,15 @@ function Dialog({ folderId, folderName, close }: { folderId: string; folderName:
   const [nested, setNested] = useState(true);
   const { folders, pages } = useNotebook.getState();
 
-  const inside = new Set([folderId, ...(nested ? descendantFolderIds(folders, folderId) : [])]);
-  const ids = pages.filter((p) => p.folderId && inside.has(p.folderId)).map((p) => p.id);
+  const ids = nested
+    ? pagesInFolders(pages, new Set([folderId, ...descendantFolderIds(folders, folderId)]))
+    : pages.filter((p) => p.folderId === folderId).map((p) => p.id);
 
   const apply = () => {
     useNotebook
       .getState()
-      .setPageInfo(ids, (current) => (type === 'character' ? { type, kind } : infoForType(type, current)));
+      // Characters keep where they belong.
+      .setPageInfo(ids, (current) => (type === 'character' ? { ...infoForType(type, current), type, kind } : infoForType(type, current)));
     close();
   };
 
@@ -69,7 +71,7 @@ function Dialog({ folderId, folderName, close }: { folderId: string; folderName:
         </div>
         <label className="inline">
           <input type="checkbox" checked={nested} onChange={(e) => setNested(e.target.checked)} />
-          Include pages in sub-folders
+          Include sub-folders and pages under pages
         </label>
         {type === 'place' && <p className="muted">Places that are already places keep the place they're inside.</p>}
       </div>

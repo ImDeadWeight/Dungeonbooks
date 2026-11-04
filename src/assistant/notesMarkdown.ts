@@ -3,7 +3,7 @@
  * (the copy buttons, for pasting into any AI chat), and the link lookups
  * Markdown needs. Uses the open campaign's notes.
  */
-import { byFolderOrder, byName, PAGE_TYPES, pageType, parentPlace, type Page } from '../lorekeeper/domain/notebook';
+import { byFolderOrder, byName, groupsOf, PAGE_TYPES, pageType, parentPlace, type Page } from '../lorekeeper/domain/notebook';
 import { normalizeTitle } from '../lorekeeper/domain/titleMatcher';
 import type { Id } from '../lorekeeper/domain/ids';
 import { useNotebook } from '../lorekeeper/state/notebookStore';
@@ -26,7 +26,10 @@ export function linkNames(): LinkNames {
 /** How a page's kind reads: "Character (NPC)", "Place inside Aurelane". */
 export function describeType(page: Page, pages: Page[]): string {
   const label = PAGE_TYPES.find((t) => t.type === pageType(page))!.label;
-  if (page.info?.type === 'character') return `${label} (${page.info.kind === 'pc' ? 'player character' : 'NPC'})`;
+  if (page.info?.type === 'character') {
+    const groups = groupsOf(pages, page).map((g) => g.title);
+    return `${label} (${page.info.kind === 'pc' ? 'player character' : 'NPC'})${groups.length ? `, belongs to ${groups.join(', ')}` : ''}`;
+  }
   const parent = parentPlace(pages, page);
   return parent ? `${label} inside ${parent.title}` : label;
 }
@@ -40,9 +43,23 @@ export function pageAsMarkdown(page: Page, headingLevel = 1): string {
   return [`${'#'.repeat(headingLevel)} ${page.title}`, `*${about}*`, ...boxes].join('\n\n');
 }
 
+/** A page followed by the pages under it (at any depth), alphabetical at each level. */
+function withPagesUnder(pages: Page[], page: Page): Page[] {
+  const under = pages.filter((p) => p.parentPageId === page.id).sort((a, b) => byName(a.title, b.title));
+  return [page, ...under.flatMap((p) => withPagesUnder(pages, p))];
+}
+
+/** A page and every page under it as one Markdown text, pages split by rules. */
+export function pageTreeAsMarkdown(pageId: Id): string {
+  const { pages } = useNotebook.getState();
+  const page = pages.find((p) => p.id === pageId);
+  return page ? withPagesUnder(pages, page).map((p) => pageAsMarkdown(p, 2)).join('\n\n---\n\n') : '';
+}
+
 /**
  * Every page in a folder and the folders inside it as one Markdown text: a
- * heading per folder ("Places / Cities"), its pages under it, pages split by rules.
+ * heading per folder ("Places / Cities"), its pages (each followed by the
+ * pages under it) under it, pages split by rules.
  */
 export function folderAsMarkdown(folderId: Id): string {
   const { folders, pages } = useNotebook.getState();
@@ -50,7 +67,10 @@ export function folderAsMarkdown(folderId: Id): string {
   if (!folder) return '';
   const parts: string[] = [];
   const walk = (id: Id, path: string) => {
-    const inside = pages.filter((p) => p.folderId === id).sort((a, b) => byName(a.title, b.title));
+    const inside = pages
+      .filter((p) => p.folderId === id && !p.parentPageId)
+      .sort((a, b) => byName(a.title, b.title))
+      .flatMap((p) => withPagesUnder(pages, p));
     if (inside.length) parts.push(`# ${path}`, ...inside.map((page) => pageAsMarkdown(page, 2)));
     for (const child of folders.filter((f) => f.parentId === id).sort(byFolderOrder)) walk(child.id, `${path} / ${child.name}`);
   };

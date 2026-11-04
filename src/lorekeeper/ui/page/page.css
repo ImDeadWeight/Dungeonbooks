@@ -46,6 +46,55 @@
   color: var(--text);
 }
 
+/* Pages named on another page (where a character belongs, the characters in a place): peek on click. */
+.page-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+}
+
+.page-chip-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.page-chip:has(.page-chip-remove) .page-chip-name {
+  padding-right: 4px;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  border-right: none;
+}
+
+.page-chip button.page-chip-remove {
+  align-self: stretch;
+  padding: 0 6px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 999px 999px 0;
+}
+
+.belongs-to {
+  flex-wrap: wrap;
+}
+
+.group-members {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 6px 0;
+}
+
+.group-members-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .page-body {
   flex: 1;
   min-height: 0;

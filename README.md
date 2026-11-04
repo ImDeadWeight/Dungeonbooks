@@ -32,6 +32,15 @@ also keep a + for a new page inside), and
 the bar under a page's title has a ⋯ menu for Link encounter, Other names (the aliases field, which then stays while
 a page has some) and Copy as Markdown.
 
+**Pages inside pages.** A page can hold other pages: drag a page onto another (or use "New page under this one" in its
+⋯ menu), and the page gets a caret that opens and closes like a folder; clicking its name still opens it. So Vaultrock
+holds Gladiator Pit and The Mines, and a faction holds its members, without a folder of the same name beside it.
+Deleting a page deletes the pages under it. Character pages also have **Belongs to**: the places and factions the
+character is part of, and each Place and Faction page lists its characters under its title (click to peek, Ctrl+click
+to open). Notes from before this are upgraded when first opened: a folder holding a page of its own name becomes that
+page with the rest under it, and characters in a folder named after a place or faction belong to it. A copy of the
+notes as they were is kept as `notebook-<campaign id>.before-format-2.json`.
+
 **Connect AI** (desktop app, top bar) lets AI apps that speak the Model Context Protocol work with the open campaign's
 notes: get an overview, search, read pages as Markdown, create pages, add or replace text, change a page's details and
 link mentions. They can't delete pages, and their changes have no undo. Connections are off until switched on there;

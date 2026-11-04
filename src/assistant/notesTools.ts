@@ -1,7 +1,7 @@
 /**
  * @file What AI apps can do with the open campaign's notes: look around,
- * search, read pages as Markdown, make pages, add and replace text, change a
- * page's details, and link mentions. Every edit goes through the notebook
+ * search, read pages as Markdown, make pages (in folders or under other
+ * pages), add and replace text, change a page's details, and link mentions. Every edit goes through the notebook
  * store, so it saves and shows on screen like the user's own. Pages are named
  * by title, alias or id. Nothing here deletes pages, folders or boxes, except
  * that replacing a box's text replaces what was in it.
@@ -13,7 +13,10 @@ import type { Id } from '../lorekeeper/domain/ids';
 import {
   byFolderOrder,
   byName,
+  canNestPage,
   infoForType,
+  isGroup,
+  membersOf,
   PAGE_TYPES,
   pageType,
   parseAliases,
@@ -82,6 +85,41 @@ function folderAt(path: unknown): Id | null {
   return parentId;
 }
 
+/** Where a page sits: "Places/Islands", "under Vaultrock (Places/Islands)", or '' for the top level. */
+function pagePlace(page: Page): string {
+  const { folders, pages } = notebook();
+  const chain: Page[] = [];
+  for (let p = page; p.parentPageId && chain.length < pages.length; ) {
+    const parent = pages.find((x) => x.id === p.parentPageId);
+    if (!parent) break;
+    chain.push(parent);
+    p = parent;
+  }
+  const top = chain.length ? chain[chain.length - 1] : page;
+  const folder = folderPath(folders, top.folderId);
+  if (!chain.length) return folder;
+  return `under ${chain.map((p) => p.title).join(' › ')}${folder ? ` (${folder})` : ''}`;
+}
+
+/** The page another goes under, from tool arguments; an error if that would put it under itself. */
+function parentPageArg(page: Page | null, value: unknown): Page {
+  const parent = findPage(value);
+  if (page && (parent.id === page.id || !canNestPage(notebook().pages, page.id, parent.id))) {
+    throw new ToolError(`"${page.title}" can't go under "${parent.title}": that page is "${page.title}" or under it.`);
+  }
+  return parent;
+}
+
+/** Places and factions from tool arguments, for belongs_to. */
+function groupsArg(value: unknown): Id[] {
+  if (!Array.isArray(value)) throw new ToolError('belongs_to must be a list of place or faction pages.');
+  return value.map((name) => {
+    const group = findPage(name);
+    if (!isGroup(group)) throw new ToolError(`"${group.title}" isn't a place or faction page.`);
+    return group.id;
+  });
+}
+
 /** A box's text as Markdown. */
 const boxMarkdown = (box: TextBox) => toMarkdown(box.content, linkNames());
 
@@ -91,14 +129,20 @@ const PAGE_TYPE_IDS = PAGE_TYPES.map((t) => t.type);
 
 /** Sets a page's type (and the type's own detail: PC/NPC, the place it is inside) from tool arguments. */
 function applyType(page: Page, args: Record<string, unknown>) {
-  const { type, character_kind: kind, inside_place: inside } = args;
-  if (type === undefined && kind === undefined && inside === undefined) return;
+  const { type, character_kind: kind, inside_place: inside, belongs_to: belongsTo } = args;
+  if (type === undefined && kind === undefined && inside === undefined && belongsTo === undefined) return;
   if (type !== undefined && !PAGE_TYPE_IDS.includes(type as PageType)) throw new ToolError(`type must be one of ${PAGE_TYPE_IDS.join(', ')}.`);
   let info: PageInfo | undefined = infoForType((type as PageType | undefined) ?? pageType(page), page.info);
   if (kind !== undefined) {
     if (info?.type !== 'character') throw new ToolError('character_kind only applies to character pages.');
     if (kind !== 'pc' && kind !== 'npc') throw new ToolError('character_kind must be "pc" or "npc".');
-    info = { type: 'character', kind };
+    info = { ...info, type: 'character', kind };
+  }
+  if (belongsTo !== undefined) {
+    if (info?.type !== 'character') throw new ToolError('belongs_to only applies to character pages.');
+    const { belongsTo: _old, ...rest } = info;
+    const ids = groupsArg(belongsTo);
+    info = ids.length ? { ...rest, belongsTo: [...new Set(ids)] } : rest;
   }
   if (inside !== undefined) {
     if (info?.type !== 'place') throw new ToolError('inside_place only applies to place pages.');
@@ -169,6 +213,11 @@ const TYPE_ARGS = {
   type: { type: 'string', enum: PAGE_TYPE_IDS, description: 'What the page describes.' },
   character_kind: { type: 'string', enum: ['npc', 'pc'], description: 'Character pages: NPC or player character.' },
   inside_place: { type: 'string', description: 'Place pages: the place page it is inside ("" for none).' },
+  belongs_to: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'Character pages: the place and faction pages the character belongs to (they list it). Replaces the current list.',
+  },
   aliases: { type: 'array', items: { type: 'string' }, description: 'Other names the page goes by; mentions of these link to it too. Replaces the current list.' },
 };
 
@@ -176,7 +225,8 @@ export const NOTES_TOOLS: Tool[] = [
   {
     name: 'get_overview',
     title: 'Overview of the notes',
-    description: "The open campaign's name and every folder and page in its notes, with each page's type and aliases. Start here.",
+    description:
+      "The open campaign's name and every folder and page in its notes, with each page's type and aliases. Pages can hold other pages, listed indented under them. Start here.",
     inputSchema: { type: 'object', properties: {} },
     readOnly: true,
     run() {
@@ -188,12 +238,16 @@ export const NOTES_TOOLS: Tool[] = [
         const empty = p.boxes.length ? '' : '; empty';
         return `${p.title} (${describeType(p, pages)}${aliases}${empty})`;
       };
+      const listPage = (p: Page, indent: string) => {
+        lines.push(`${indent}- ${describe(p)}`);
+        for (const child of pages.filter((c) => c.parentPageId === p.id).sort((a, b) => byName(a.title, b.title))) listPage(child, indent + '  ');
+      };
       const walk = (parentId: Id | null, indent: string) => {
         for (const f of folders.filter((f) => f.parentId === parentId).sort(byFolderOrder)) {
           lines.push(`${indent}${f.name}/`);
           walk(f.id, indent + '  ');
         }
-        for (const p of pages.filter((p) => p.folderId === parentId).sort((a, b) => byName(a.title, b.title))) lines.push(`${indent}- ${describe(p)}`);
+        for (const p of pages.filter((p) => p.folderId === parentId && !p.parentPageId).sort((a, b) => byName(a.title, b.title))) listPage(p, indent);
       };
       walk(null, '');
       return lines.join('\n');
@@ -229,15 +283,21 @@ export const NOTES_TOOLS: Tool[] = [
     name: 'read_page',
     title: 'Read a page',
     description:
-      'A page as Markdown: its title, type, aliases and folder, then each text box, numbered (pages are free canvases holding several boxes). Links to pages show as [[Title]].',
+      'A page as Markdown: its title, type, aliases, where it sits (folder, or the page it is under) and the pages under it, then each text box, numbered (pages are free canvases holding several boxes). Links to pages show as [[Title]].',
     inputSchema: { type: 'object', properties: { page: PAGE_ARG }, required: ['page'] },
     readOnly: true,
     run({ page: name }) {
       const page = findPage(name);
-      const { folders, pages } = notebook();
+      const { pages } = notebook();
       const lines = [`# ${page.title}`, `Type: ${describeType(page, pages)}`];
       if (page.aliases?.length) lines.push(`Also called: ${page.aliases.join(', ')}`);
-      lines.push(`Folder: ${folderPath(folders, page.folderId) || '(top level)'}`);
+      lines.push(page.parentPageId ? `Sits ${pagePlace(page)}` : `Folder: ${pagePlace(page) || '(top level)'}`);
+      const under = pages.filter((p) => p.parentPageId === page.id).sort((a, b) => byName(a.title, b.title));
+      if (under.length) lines.push(`Pages under it: ${under.map((p) => p.title).join(', ')}`);
+      if (page.info && isGroup(page)) {
+        const members = membersOf(pages, page.id);
+        if (members.length) lines.push(`Characters who belong here: ${members.map((p) => p.title).join(', ')}`);
+      }
       if (page.statBlock) lines.push('Has a stat block.');
       if (!page.boxes.length) lines.push('', '(No text yet.)');
       page.boxes.forEach((box, i) => lines.push('', `--- Text box ${i + 1} ---`, boxMarkdown(box)));
@@ -248,12 +308,13 @@ export const NOTES_TOOLS: Tool[] = [
     name: 'create_page',
     title: 'Create a page',
     description:
-      'Makes a new page, optionally in a folder (made if missing), with a type, aliases and starting text. Fails if a page already has that title; use add_text or update_page for those.',
+      'Makes a new page, optionally in a folder (made if missing) or under another page, with a type, aliases and starting text. Fails if a page already has that title; use add_text or update_page for those.',
     inputSchema: {
       type: 'object',
       properties: {
         title: { type: 'string' },
         folder: { type: 'string', description: 'Folder path like "Places/Cities"; the top level when left out.' },
+        under_page: { type: 'string', description: 'A page to put it under instead of a folder (Gladiator Pit under Vaultrock).' },
         ...TYPE_ARGS,
         text: TEXT_ARG,
       },
@@ -265,7 +326,9 @@ export const NOTES_TOOLS: Tool[] = [
       if (notebook().pages.some((p) => normalizeTitle(p.title) === normalizeTitle(title))) throw new ToolError(`A page called "${title}" already exists.`);
       const aliases = aliasesArg(args.aliases);
       const text = args.text === undefined ? null : textArg(args.text);
-      const id = notebook().addPage(folderAt(args.folder), title);
+      if (args.under_page !== undefined && args.folder !== undefined) throw new ToolError('Give a folder or under_page, not both.');
+      const parent = args.under_page === undefined ? null : parentPageArg(null, args.under_page);
+      const id = parent ? notebook().addChildPage(parent.id, title) : notebook().addPage(folderAt(args.folder), title);
       applyType(notebook().pages.find((p) => p.id === id)!, args);
       if (aliases) notebook().setPageAliases(id, aliases);
       if (text) addBoxBelow(notebook().pages.find((p) => p.id === id)!, text.doc);
@@ -305,13 +368,15 @@ export const NOTES_TOOLS: Tool[] = [
   {
     name: 'update_page',
     title: "Change a page's details",
-    description: "Renames a page (links to it keep working), moves it to a folder, or changes its type, character kind, the place it is inside, or its aliases. Only what is given changes.",
+    description:
+      "Renames a page (links to it keep working), moves it to a folder or under another page (the pages under it come along), or changes its type, character kind, the place it is inside, the places and factions a character belongs to, or its aliases. Only what is given changes.",
     inputSchema: {
       type: 'object',
       properties: {
         page: PAGE_ARG,
         title: { type: 'string', description: 'New title.' },
         folder: { type: 'string', description: 'Folder path to move it to ("" for the top level); made if missing.' },
+        under_page: { type: 'string', description: 'A page to move it under instead of a folder.' },
         ...TYPE_ARGS,
       },
       required: ['page'],
@@ -327,12 +392,18 @@ export const NOTES_TOOLS: Tool[] = [
         changes.push(`renamed to "${title}"`);
       }
       const aliases = aliasesArg(args.aliases);
+      if (args.under_page !== undefined && args.folder !== undefined) throw new ToolError('Give a folder or under_page, not both.');
       if (args.folder !== undefined) {
         const folderId = folderAt(args.folder || null);
         notebook().movePage(page.id, folderId);
         changes.push(`moved to ${folderPath(notebook().folders, folderId) || 'the top level'}`);
       }
-      if (args.type !== undefined || args.character_kind !== undefined || args.inside_place !== undefined) {
+      if (args.under_page !== undefined) {
+        const parent = parentPageArg(page, args.under_page);
+        notebook().nestPage(page.id, parent.id);
+        changes.push(`moved under "${parent.title}"`);
+      }
+      if (args.type !== undefined || args.character_kind !== undefined || args.inside_place !== undefined || args.belongs_to !== undefined) {
         applyType(notebook().pages.find((p) => p.id === page.id)!, args);
         const updated = notebook().pages.find((p) => p.id === page.id)!;
         changes.push(`now ${describeType(updated, notebook().pages)}`);
@@ -341,7 +412,7 @@ export const NOTES_TOOLS: Tool[] = [
         notebook().setPageAliases(page.id, aliases);
         changes.push(aliases.length ? `also called ${aliases.join(', ')}` : 'aliases removed');
       }
-      return changes.length ? `"${page.title}": ${changes.join('; ')}.` : 'Nothing to change: give a title, folder, type, character_kind, inside_place or aliases.';
+      return changes.length ? `"${page.title}": ${changes.join('; ')}.` : 'Nothing to change: give a title, folder, under_page, type, character_kind, inside_place, belongs_to or aliases.';
     },
   },
   {

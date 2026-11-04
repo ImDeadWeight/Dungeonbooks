@@ -18,8 +18,10 @@ const PUBLISH_DELAY_MS = 300;
 /** A page as published to Encounters: only typed pages (characters, places, factions, items), and characters' stat blocks. */
 function toLorePage(p: Page): LorePage | null {
   if (!p.info) return null;
-  const statBlock = p.info.type === 'character' ? p.statBlock : undefined;
-  return { id: p.id, title: p.title, info: p.info, ...(statBlock ? { statBlock } : {}) };
+  if (p.info.type !== 'character') return { id: p.id, title: p.title, info: p.info };
+  // Encounters doesn't use where characters belong.
+  const info = { type: p.info.type, kind: p.info.kind };
+  return { id: p.id, title: p.title, info, ...(p.statBlock ? { statBlock: p.statBlock } : {}) };
 }
 const lorePages = (pages: Page[]) => pages.map(toLorePage).filter((p): p is LorePage => p !== null);
 

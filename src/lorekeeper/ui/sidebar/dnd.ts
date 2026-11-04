@@ -1,8 +1,9 @@
 /**
  * @file Sidebar drag-and-drop rules. Pages and folders can be dropped into a
- * folder or onto the top level. A folder dragged over the top or bottom edge
- * of another folder's row is placed before or after it instead, which is how
- * folders are reordered. A folder can't go inside itself.
+ * folder or onto the top level, and pages onto another page to go under it.
+ * A folder dragged over the top or bottom edge of another folder's row is
+ * placed before or after it instead, which is how folders are reordered.
+ * Nothing can go inside itself.
  */
 import {
   pointerWithin,
@@ -13,7 +14,7 @@ import {
 } from '@dnd-kit/core';
 import { create } from 'zustand';
 import type { Id } from '../../domain/ids';
-import { byFolderOrder, canMoveFolder } from '../../domain/notebook';
+import { byFolderOrder, canMoveFolder, canNestPage } from '../../domain/notebook';
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
 
@@ -21,9 +22,10 @@ import { useUi } from '../../state/uiStore';
 export type DragItem = { type: 'page' | 'folder'; id: Id };
 /**
  * Data attached to something that accepts drops: a folder row (with the
- * folder it sits in, for placing beside it), or the top level (folderId null).
+ * folder it sits in, for placing beside it), a page row (pageId; folderId
+ * null), or the top level (folderId null).
  */
-export type DropTarget = { folderId: Id | null; parentId?: Id | null };
+export type DropTarget = { folderId: Id | null; parentId?: Id | null; pageId?: Id };
 /** Where on a folder row the drop lands: into the folder, or beside it. */
 export type DropZone = 'inside' | 'before' | 'after';
 
@@ -32,7 +34,7 @@ export const ROOT_DROP_ID = 'drop:root';
 /** Share of a row's height, at its top and at its bottom, that places a folder beside it rather than inside. */
 const EDGE = 0.3;
 
-/** The droppable under the pointer; a folder row wins over the top-level area around it. */
+/** The droppable under the pointer; a row wins over the top-level area around it. */
 export const collisionDetection: CollisionDetection = (args) => {
   const hits = pointerWithin(args);
   return hits.length > 1 ? hits.filter((h) => h.id !== ROOT_DROP_ID) : hits;
@@ -73,6 +75,7 @@ function zoneOf(item: DragItem | undefined, over: Over | null, y: number | null)
 /** Whether the dragged item may be dropped on the target, in the given zone. */
 export function accepts(target: DropTarget, item: DragItem | undefined, zone: DropZone = 'inside'): boolean {
   if (!item) return false;
+  if (target.pageId) return item.type === 'page' && zone === 'inside' && canNestPage(useNotebook.getState().pages, item.id, target.pageId);
   if (item.type === 'page') return zone === 'inside';
   const folders = useNotebook.getState().folders;
   if (zone === 'inside') return canMoveFolder(folders, item.id, target.folderId);
@@ -87,7 +90,7 @@ export function handleDragMove(event: DragMoveEvent) {
   if (current.overId !== overId || current.zone !== zone) useDropZone.setState({ overId, zone });
 }
 
-/** Moves or places the dropped page/folder if the target accepts it, and opens the folder it landed in. */
+/** Moves or places the dropped page/folder if the target accepts it, and opens the folder or page it landed in. */
 export function handleDragEnd(event: DragEndEvent) {
   useDropZone.setState({ overId: null, zone: 'inside' });
   const item = event.active.data.current as DragItem | undefined;
@@ -95,6 +98,12 @@ export function handleDragEnd(event: DragEndEvent) {
   const zone = zoneOf(item, event.over, pointerY(event));
   if (!item || !target || !accepts(target, item, zone)) return;
   const notebook = useNotebook.getState();
+
+  if (target.pageId) {
+    notebook.nestPage(item.id, target.pageId);
+    useUi.getState().expandFolder(target.pageId);
+    return;
+  }
 
   if (zone !== 'inside') {
     // Place beside the target folder, among the folders it sits with.

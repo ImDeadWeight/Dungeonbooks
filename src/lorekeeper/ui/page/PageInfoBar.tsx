@@ -1,7 +1,7 @@
 /**
  * @file The row under a page's title: what the page describes (note,
- * character, place…) and that type's own fields — PC/NPC for characters,
- * the place a place is inside — the Stat block button (characters), and a ⋯
+ * character, place…) and that type's own fields — PC/NPC and where they
+ * belong for characters, the place a place is inside — the Stat block button (characters), and a ⋯
  * menu with Link encounter, Other names and Copy as Markdown. The other names
  * (aliases) field shows once a page has some, or when chosen from the menu.
  */
@@ -22,6 +22,7 @@ import {
 import { pageAsMarkdown } from '../../../assistant/notesMarkdown';
 import { MoreMenu } from '../common/MoreMenu';
 import { LinkEncounterDialog } from '../encounters/LinkEncounterDialog';
+import { BelongsToField } from './PageGroups';
 import { PageTypeIcon } from './pageTypes';
 import { StatBlockButton } from './StatBlockPanel';
 
@@ -85,12 +86,14 @@ export function PageInfoBar({ page }: { page: Page }) {
 
       {page.info?.type === 'character' && (
         <label className="page-info-field">
-          <select value={page.info.kind} onChange={(e) => setInfo({ type: 'character', kind: e.target.value as CharacterKind })}>
+          <select value={page.info.kind} onChange={(e) => setInfo({ ...page.info, type: 'character', kind: e.target.value as CharacterKind })}>
             <option value="npc">NPC</option>
             <option value="pc">Player character</option>
           </select>
         </label>
       )}
+
+      {page.info?.type === 'character' && <BelongsToField page={page} />}
 
       {page.info?.type === 'place' && (
         <label className="page-info-field">

@@ -1,13 +1,24 @@
 /**
- * @file The collapsible left panel: nested folders and pages, with drag and
- * drop to reorganise them and a search box to narrow them down.
+ * @file The collapsible left panel: nested folders and pages (pages can hold
+ * pages too), with drag and drop to reorganise them and a search box to
+ * narrow them down.
  */
-import { folderAsMarkdown } from '../../../assistant/notesMarkdown';
+import { folderAsMarkdown, pageTreeAsMarkdown } from '../../../assistant/notesMarkdown';
 import { DndContext, MouseSensor, TouchSensor, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { FilePlus, Folder, FolderOpen, FolderPlus, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Id } from '../../domain/ids';
-import { byFolderOrder, byName, descendantFolderIds, filterTree, pageType, type Folder as FolderModel, type Page } from '../../domain/notebook';
+import {
+  byFolderOrder,
+  byName,
+  descendantFolderIds,
+  descendantPageIds,
+  filterTree,
+  pagesInFolders,
+  pageType,
+  type Folder as FolderModel,
+  type Page,
+} from '../../domain/notebook';
 import { PageTypeIcon } from '../page/pageTypes';
 import { useNotebook } from '../../state/notebookStore';
 import { useUi } from '../../state/uiStore';
@@ -28,6 +39,16 @@ export function createPage(folderId: Id | null) {
   ui.setFocusTitle(id);
 }
 
+/** Creates a page under another page, opens it and selects its title for typing. */
+function createChildPage(parentPageId: Id) {
+  const id = useNotebook.getState().addChildPage(parentPageId);
+  const ui = useUi.getState();
+  ui.setSidebarSearch('');
+  ui.expandFolder(parentPageId);
+  ui.selectPage(id);
+  ui.setFocusTitle(id);
+}
+
 /** Creates a folder and opens its parent so it shows (ending any search, which it wouldn't match). */
 function createFolder(parentId: Id | null) {
   useNotebook.getState().addFolder(parentId);
@@ -39,7 +60,7 @@ function createFolder(parentId: Id | null) {
 function confirmDeleteFolder(folder: FolderModel) {
   const { folders, pages } = useNotebook.getState();
   const inside = new Set([folder.id, ...descendantFolderIds(folders, folder.id)]);
-  const pageCount = pages.filter((p) => p.folderId && inside.has(p.folderId)).length;
+  const pageCount = pagesInFolders(pages, inside).length;
   useUi.getState().askConfirm({
     message:
       inside.size === 1 && pageCount === 0
@@ -50,14 +71,18 @@ function confirmDeleteFolder(folder: FolderModel) {
   });
 }
 
-/** Asks before deleting a page. */
+/** Asks before deleting a page (with the pages under it). */
 function confirmDeletePage(page: Page) {
+  const doomed = [page.id, ...descendantPageIds(useNotebook.getState().pages, page.id)];
   useUi.getState().askConfirm({
-    message: `Delete the page "${page.title}"? Links to it will stop working.`,
+    message:
+      doomed.length === 1
+        ? `Delete the page "${page.title}"? Links to it will stop working.`
+        : `Delete "${page.title}" with ${doomed.length - 1} page(s) under it? Links to those pages will stop working.`,
     confirmLabel: 'Delete page',
     onConfirm: () => {
       useNotebook.getState().deletePage(page.id);
-      if (useUi.getState().selectedPageId === page.id) useUi.getState().selectPage(null);
+      if (doomed.includes(useUi.getState().selectedPageId ?? '')) useUi.getState().selectPage(null);
     },
   });
 }
@@ -70,25 +95,45 @@ function useChildren(folderId: Id | null) {
   const shown = (id: Id) => !filter || filter.visible.has(id);
   return {
     folders: folders.filter((f) => f.parentId === folderId && shown(f.id)).sort(byFolderOrder),
-    pages: pages.filter((p) => p.folderId === folderId && shown(p.id)).sort((a, b) => byName(a.title, b.title)),
+    pages: pages.filter((p) => p.folderId === folderId && !p.parentPageId && shown(p.id)).sort((a, b) => byName(a.title, b.title)),
   };
 }
 
-/** A page's row. */
+/** Pages directly under a page, alphabetical (only search results while searching). */
+function useChildPages(pageId: Id) {
+  const pages = useNotebook((s) => s.pages);
+  const filter = useTreeFilter();
+  return pages.filter((p) => p.parentPageId === pageId && (!filter || filter.visible.has(p.id))).sort((a, b) => byName(a.title, b.title));
+}
+
+/** A page's row and, when it has pages under it and is expanded, those pages. */
 function PageNode({ page, depth }: { page: Page; depth: number }) {
   const selected = useUi((s) => s.selectedPageId === page.id);
+  const children = useChildPages(page.id);
+  const { expanded, toggle } = useFolderOpen(page.id);
+  const hasChildren = children.length > 0;
   return (
-    <div className="tree-node leaf">
+    <div className={`tree-node${hasChildren ? '' : ' leaf'}`}>
       <TreeRow
         depth={depth}
         label={page.title}
         icon={<PageTypeIcon type={pageType(page)} />}
         drag={{ type: 'page', id: page.id }}
+        drop={{ folderId: null, pageId: page.id }}
+        expanded={hasChildren ? expanded : undefined}
+        onToggle={hasChildren ? toggle : undefined}
         selected={selected}
         onSelect={() => useUi.getState().selectPage(page.id)}
+        onAddChildPage={() => createChildPage(page.id)}
+        copyMarkdown={hasChildren ? () => pageTreeAsMarkdown(page.id) : undefined}
         onDelete={() => confirmDeletePage(page)}
         onRename={(title) => useNotebook.getState().renamePage(page.id, title)}
       />
+      {hasChildren && expanded && (
+        <TreeChildren parentDepth={depth}>
+          {children.map((p) => <PageNode key={p.id} page={p} depth={depth + 1} />)}
+        </TreeChildren>
+      )}
     </div>
   );
 }

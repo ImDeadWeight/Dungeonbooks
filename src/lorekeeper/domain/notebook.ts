@@ -1,6 +1,6 @@
 /**
- * @file The notebook model: nested folders, named pages, and the free-floating
- * text boxes on each page, plus pure tree helpers.
+ * @file The notebook model: nested folders, named pages (which can hold other
+ * pages), and the free-floating text boxes on each page, plus pure tree helpers.
  */
 import type { JSONContent } from '@tiptap/core';
 import type { SharedStatBlock } from 'campaign-link';
@@ -33,7 +33,8 @@ export type CharacterKind = 'pc' | 'npc';
  * without info is a plain note. Encounters reads characters and places.
  */
 export type PageInfo =
-  | { type: 'character'; kind: CharacterKind }
+  /** belongsTo: the places and factions the character belongs to (shown on those pages). */
+  | { type: 'character'; kind: CharacterKind; belongsTo?: Id[] }
   /** parentPlaceId: the place this one is inside (Fort Talbot inside Aurelane), or null. */
   | { type: 'place'; parentPlaceId: Id | null }
   | { type: 'faction' }
@@ -57,7 +58,10 @@ export interface Page {
   title: string;
   /** Other names the page goes by ("Thal", "the Imperium"); mentions of these link to it too. Absent when there are none. */
   aliases?: string[];
+  /** The folder the page is in (null: the top level, or under another page). */
   folderId: Id | null;
+  /** The page this one sits under in the sidebar (its folderId is then null). */
+  parentPageId?: Id;
   boxes: TextBox[];
   /** Absent for plain notes. */
   info?: PageInfo;
@@ -118,15 +122,85 @@ export function placeParentOptions(pages: Page[], placeId: Id): Page[] {
   return pages.filter((p) => p.info?.type === 'place' && !blocked.has(p.id)).sort((a, b) => byName(a.title, b.title));
 }
 
+/** Pages a character can belong to: places and factions. */
+export function isGroup(page: Page): boolean {
+  return page.info?.type === 'place' || page.info?.type === 'faction';
+}
+
+/** The places and factions a character page belongs to (those that still exist), by name. */
+export function groupsOf(pages: Page[], page: Page): Page[] {
+  if (page.info?.type !== 'character' || !page.info.belongsTo) return [];
+  const ids = new Set(page.info.belongsTo);
+  return pages.filter((p) => ids.has(p.id) && isGroup(p)).sort((a, b) => byName(a.title, b.title));
+}
+
+/** Places and factions a character could also be put in: those it isn't in yet. */
+export function groupOptions(pages: Page[], page: Page): Page[] {
+  const taken = new Set(groupsOf(pages, page).map((p) => p.id));
+  return pages.filter((p) => isGroup(p) && !taken.has(p.id) && p.id !== page.id).sort((a, b) => byName(a.title, b.title));
+}
+
+/** Character pages that belong to a place or faction, by name. */
+export function membersOf(pages: Page[], groupId: Id): Page[] {
+  return pages
+    .filter((p) => p.info?.type === 'character' && p.info.belongsTo?.includes(groupId))
+    .sort((a, b) => byName(a.title, b.title));
+}
+
+/** Ids of every page under the given page (at any depth), not including it. */
+export function descendantPageIds(pages: Page[], pageId: Id): Id[] {
+  const result: Id[] = [];
+  const queue = [pageId];
+  while (queue.length) {
+    const parent = queue.shift()!;
+    for (const p of pages) {
+      if (p.parentPageId === parent && !result.includes(p.id)) {
+        result.push(p.id);
+        queue.push(p.id);
+      }
+    }
+  }
+  return result;
+}
+
+/** A page can go under any page except itself and the pages under it. */
+export function canNestPage(pages: Page[], pageId: Id, parentPageId: Id): boolean {
+  return parentPageId !== pageId && !descendantPageIds(pages, pageId).includes(parentPageId);
+}
+
+/** Ids of the pages in the given folders, with every page under them. */
+export function pagesInFolders(pages: Page[], folderIds: Set<Id>): Id[] {
+  const direct = pages.filter((p) => p.folderId && folderIds.has(p.folderId)).map((p) => p.id);
+  return [...new Set(direct.flatMap((id) => [id, ...descendantPageIds(pages, id)]))];
+}
+
+/** Where a page sits in the sidebar: the page it is under, else its folder (null: the top level). */
+export function pageParentId(page: Pick<Page, 'folderId' | 'parentPageId'>): Id | null {
+  return page.parentPageId ?? page.folderId;
+}
+
+/** Saved notebooks before this format had no child pages; loading one upgrades it (see upgrade.ts). */
+export const NOTEBOOK_FORMAT = 2;
+
 /** Everything that is saved. */
 export interface Notebook {
+  /** Absent in notebooks saved before child pages (format 1). */
+  format?: number;
   folders: Folder[];
   pages: Page[];
 }
 
-/** A fresh, empty notebook. */
+/**
+ * Nothing at all: what a missing file loads as. It has no format, so that
+ * fields missing from an older file aren't mistaken for the current format.
+ */
 export function emptyNotebook(): Notebook {
   return { folders: [], pages: [] };
+}
+
+/** A fresh, empty notebook in the current format. */
+export function newNotebook(): Notebook {
+  return { format: NOTEBOOK_FORMAT, folders: [], pages: [] };
 }
 
 /** Sidebar order: alphabetical, numbers compared as numbers ("Session 2" before "Session 10"). */
@@ -179,44 +253,52 @@ export function canMoveFolder(folders: Folder[], folderId: Id, newParentId: Id |
 
 /** What the sidebar shows while searching. */
 export interface TreeFilter {
-  /** Folders and pages to show: matches, the folders above them, and everything inside a matching folder. */
+  /** Folders and pages to show: matches, the folders and pages above them, and everything inside a match. */
   visible: Set<Id>;
-  /** Folders opened because a match is inside them. */
+  /** Folders and pages opened because a match is inside them. */
   opened: Set<Id>;
 }
 
 /**
  * Narrows the sidebar tree to a search: folders and pages whose names (or a
- * page's aliases) contain the text (ignoring case), the folders above them,
- * and everything inside a matching folder. Null when the search is blank.
+ * page's aliases) contain the text (ignoring case), the folders and pages
+ * above them, and everything inside a matching folder or page. Null when the
+ * search is blank.
  */
 export function filterTree(folders: Folder[], pages: Page[], query: string): TreeFilter | null {
   const q = query.trim().toLowerCase();
   if (!q) return null;
-  const parentOf = new Map(folders.map((f) => [f.id, f.parentId]));
-  const matchingFolders = new Set(folders.filter((f) => f.name.toLowerCase().includes(q)).map((f) => f.id));
-  // The folders above an item, nearest first (bounded in case of a parent loop).
+  const parentOf = new Map<Id, Id | null>([
+    ...folders.map((f): [Id, Id | null] => [f.id, f.parentId]),
+    ...pages.map((p): [Id, Id | null] => [p.id, pageParentId(p)]),
+  ]);
+  const matches = (...names: string[]) => names.some((name) => name.toLowerCase().includes(q));
+  const matching = new Set([
+    ...folders.filter((f) => matches(f.name)).map((f) => f.id),
+    ...pages.filter((p) => matches(p.title, ...(p.aliases ?? []))).map((p) => p.id),
+  ]);
+  // The folders and pages above an item, nearest first (bounded in case of a parent loop).
   const above = (parentId: Id | null) => {
     const chain: Id[] = [];
-    for (let id = parentId; id !== null && parentOf.has(id) && chain.length < folders.length; id = parentOf.get(id)!) chain.push(id);
+    for (let id = parentId; id !== null && parentOf.has(id) && chain.length < parentOf.size; id = parentOf.get(id)!) chain.push(id);
     return chain;
   };
   const visible = new Set<Id>();
   const opened = new Set<Id>();
-  const consider = (id: Id, parentId: Id | null, ...names: string[]) => {
+  const consider = (id: Id, parentId: Id | null) => {
     const chain = above(parentId);
-    if (names.some((name) => name.toLowerCase().includes(q))) {
+    if (matching.has(id)) {
       visible.add(id);
       for (const f of chain) {
         visible.add(f);
         opened.add(f);
       }
-    } else if (chain.some((f) => matchingFolders.has(f))) {
+    } else if (chain.some((f) => matching.has(f))) {
       visible.add(id);
     }
   };
-  for (const f of folders) consider(f.id, f.parentId, f.name);
-  for (const p of pages) consider(p.id, p.folderId, p.title, ...(p.aliases ?? []));
+  for (const f of folders) consider(f.id, f.parentId);
+  for (const p of pages) consider(p.id, pageParentId(p));
   return { visible, opened };
 }
 
