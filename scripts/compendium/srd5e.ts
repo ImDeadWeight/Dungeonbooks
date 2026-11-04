@@ -88,10 +88,11 @@ function speedText(speed: SrdMonster['speed']): string {
   return parts.join(', ');
 }
 
-/** "blindsight 60 ft., darkvision 120 ft., passive Perception 21" */
+/** "blindsight 60 ft., darkvision 120 ft." (the stat block works out passive Perception itself). */
 function sensesText(senses: SrdMonster['senses']): string {
   return Object.entries(senses)
-    .map(([key, value]) => (key === 'passive_perception' ? `passive Perception ${value}` : `${key} ${value}`))
+    .filter(([key]) => key !== 'passive_perception')
+    .map(([key, value]) => `${key} ${value}`)
     .join(', ');
 }
 

@@ -50,7 +50,7 @@ describe('converting SRD creatures', () => {
       // DEX +2, PB +2: +6 is expertise, +4 proficient.
       skills: { stealth: 'expertise', sleightOfHand: 'proficient' },
       conditionImmunities: 'poisoned',
-      senses: 'darkvision 60 ft., passive Perception 9',
+      senses: 'darkvision 60 ft.',
       traits: [{ name: 'Nimble Escape', description: 'Disengage or Hide as a bonus action.' }],
       actions: [{ name: 'Fire Breath (Recharge 5–6)', description: 'Whoosh.' }],
     });
