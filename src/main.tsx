@@ -9,6 +9,7 @@ import ReactDOM from 'react-dom/client';
 import { startChats } from './assistant/chat/chats';
 import { startAssistantSettings } from './assistant/chat/settings';
 import { startAiConnection } from './assistant/connection';
+import { startAiChanges } from './assistant/history/aiChangeStore';
 import { startTabs, useTabs } from './bridge/navigation';
 import { startCampaigns } from './campaigns/campaignStore';
 import { setErrorReporter } from './campaigns/errors';
@@ -50,7 +51,7 @@ async function load(): Promise<string | null> {
   await unifyCampaigns();
   // Both tabs load the open campaign, so the list comes first.
   const campaignsWarning = await startCampaigns();
-  await Promise.all([startTabs(), loadEncounters(), loadLorekeeper(), startAssistantSettings(), startChats()]);
+  await Promise.all([startTabs(), loadEncounters(), loadLorekeeper(), startAssistantSettings(), startChats(), startAiChanges()]);
   if (campaignsWarning) useEncountersUi.getState().notify('error', campaignsWarning);
   return copied;
 }

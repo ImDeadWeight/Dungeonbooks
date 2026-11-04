@@ -12,6 +12,7 @@ import { useUi as useLorekeeperUi } from '../../lorekeeper/state/uiStore';
 import { INSTRUCTIONS } from '../mcpServer';
 import { chat } from '../models/clients';
 import { ModelError, type ChatMessage, type Connection, type ToolCall, type ToolResult, type ToolSpec } from '../models/types';
+import { runRecorded } from '../history/recordedRun';
 import { NOTES_TOOLS, ToolError } from '../notesTools';
 import { useChats } from './chats';
 import { chatPermission, currentConnection } from './settings';
@@ -76,7 +77,8 @@ async function runCall(chatId: string, campaignId: string, call: ToolCall): Prom
     return result('The user did not allow this change. Ask them what they would like instead.', true);
   }
   try {
-    return result(tool.run(call.args));
+    const { text, changeId } = runRecorded(tool, call.args, 'assistant');
+    return { ...result(text), ...(changeId && { changeId }) };
   } catch (e) {
     return result(e instanceof ToolError ? e.message : `Something went wrong: ${e instanceof Error ? e.message : String(e)}`, true);
   }

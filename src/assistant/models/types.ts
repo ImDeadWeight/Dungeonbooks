@@ -51,6 +51,8 @@ export interface ToolResult {
   name: string;
   text: string;
   isError: boolean;
+  /** The undoable change it made to the notes (see history/aiChanges.ts), if any. */
+  changeId?: string;
 }
 
 /** One message of a chat. Tool results follow the assistant message that asked for them. */

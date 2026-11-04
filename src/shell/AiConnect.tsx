@@ -83,7 +83,7 @@ export function AiAppsSettings({ children }: { children: ReactNode }) {
     <div className="ai-connect">
       <p>
         Lets AI apps like Claude work with the open campaign's notes: read and search pages, and make the changes
-        allowed below. They can't delete pages, and there is no undo for their changes.
+        allowed below. They can't delete pages, and each change can be undone in Settings → AI changes.
       </p>
       {status && (
         <>

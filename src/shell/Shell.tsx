@@ -10,6 +10,7 @@ import { AssistantApp } from '../assistant/ui/AssistantApp';
 import { useTabs } from '../bridge/navigation';
 import { App as EncountersApp } from '../encounters/ui/App';
 import { App as LorekeeperApp } from '../lorekeeper/ui/App';
+import { AiChangeToast } from './aiChanges/AiChangeToast';
 import { SettingsDialog } from './Settings';
 import './shell.css';
 
@@ -31,6 +32,7 @@ export function Shell() {
         <AssistantApp />
       </div>
       <SettingsDialog />
+      <AiChangeToast />
     </>
   );
 }

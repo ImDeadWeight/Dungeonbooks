@@ -7,6 +7,7 @@
  * refused.
  */
 import { appPermission } from './chat/settings';
+import { runRecorded } from './history/recordedRun';
 import { NOTES_TOOLS, ToolError, type Tool } from './notesTools';
 
 /** Protocol versions this server speaks, newest first. */
@@ -26,7 +27,7 @@ Working well with the user's notes:
 - Give new characters, places, factions and items their own pages with the right type, and link to them.
 - After writing, link_mentions can link the remaining mentions of existing pages.
 - These are the user's notes: keep their wording and facts unless asked to change them, and say what you changed.
-There is no undo for changes made here, and nothing here deletes pages.`;
+The user can undo each change made here (Settings → AI changes), and nothing here deletes pages.`;
 
 /** The tools AI apps may use right now. */
 const tools = (): Tool[] => NOTES_TOOLS.filter((t) => t.readOnly || appPermission(t.name) === 'allow');
@@ -63,7 +64,7 @@ function callTool(params: Record<string, unknown> | undefined) {
   }
   const args = (params?.arguments ?? {}) as Record<string, unknown>;
   try {
-    return { content: [{ type: 'text', text: tool.run(args) }], isError: false };
+    return { content: [{ type: 'text', text: runRecorded(tool, args, 'app').text }], isError: false };
   } catch (e) {
     const text = e instanceof ToolError ? e.message : `Something went wrong in Dungeon Books: ${e instanceof Error ? e.message : String(e)}`;
     return { content: [{ type: 'text', text }], isError: true };
