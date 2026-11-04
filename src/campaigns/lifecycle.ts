@@ -7,7 +7,7 @@
 import type { FormatId } from 'campaign-link/formats/formatIds';
 import { useCampaigns } from './campaignStore';
 import { reportError } from './errors';
-import { byName, NEW_CAMPAIGN_NAME, uniqueName, type Campaign } from './types';
+import { byName, NEW_CAMPAIGN_NAME, uniqueName, type Campaign, type PartySize } from './types';
 
 /** What a tab does with its data when campaigns change. */
 export interface CampaignParticipant {
@@ -68,6 +68,17 @@ export function renameCampaign(id: string, name: string) {
 /** Sets a campaign's default format for new encounters and characters. */
 export function setCampaignFormat(id: string, formatId: FormatId | null) {
   useCampaigns.getState().update(id, { formatId });
+}
+
+/** Sets (or, with null, clears) the campaign's usual party. */
+export function setCampaignParty(id: string, party: PartySize | null) {
+  useCampaigns.setState((s) => ({
+    campaigns: s.campaigns.map((c) => {
+      if (c.id !== id) return c;
+      const { party: _old, ...rest } = c;
+      return party ? { ...rest, party } : rest;
+    }),
+  }));
 }
 
 /**

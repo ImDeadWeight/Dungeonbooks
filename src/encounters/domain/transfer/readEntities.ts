@@ -191,7 +191,14 @@ export function readCampaign(v: unknown, path: string): Campaign {
     id: readId(o.id, `${path}.id`),
     name: readName(o.name, `${path}.name`),
     formatId: o.formatId === undefined || o.formatId === null ? null : readOneOf(o.formatId, `${path}.formatId`, FORMAT_IDS),
+    ...(o.party !== undefined && { party: readParty(o.party, `${path}.party`) }),
   };
+}
+
+/** A campaign's usual party. */
+function readParty(v: unknown, path: string) {
+  const o = readObject(v, path);
+  return { size: readInt(o.size, `${path}.size`, 1, 20), level: readInt(o.level, `${path}.level`, -1, 30) };
 }
 
 /** Fails if two items in a list share an id. */

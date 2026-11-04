@@ -14,6 +14,7 @@ import { useCharacters } from '../../state/characterStore';
 import { libraryCopy } from '../../state/compendium';
 import { useUi } from '../../state/uiStore';
 import { CompendiumList } from '../compendium/CompendiumList';
+import { DifficultyBadge } from '../difficulty/DifficultyBadge';
 import { CharacterFilterBar } from '../characters/CharacterFilterBar';
 import { NumberInput } from 'campaign-link/ui/common/fields';
 import { QuantityPrompt } from './QuantityPrompt';
@@ -39,6 +40,12 @@ export function CartBuilder({ cart, alreadyIn = [], formatId }: Props) {
   const shown = filterTemplates(templates.filter((t) => t.formatId === formatId), filter);
   // Find a template by id.
   const lookup = (id: string) => templates.find((t) => t.id === id);
+
+  // Who would be in the encounter: those already in it, and the cart.
+  const members = [...alreadyIn, ...cart.lines.flatMap((l) => Array.from({ length: l.quantity }, () => l.templateId))].flatMap((id) => {
+    const template = lookup(id);
+    return template ? [{ template, side: '' }] : [];
+  });
 
   // NPCs ask for a quantity first; PCs go straight in (once).
   const pick = (t: CharacterTemplate) => (t.kind === 'npc' ? setAsking(t) : cart.add(t, 1));
@@ -96,7 +103,10 @@ export function CartBuilder({ cart, alreadyIn = [], formatId }: Props) {
         )}
       </section>
       <section className="cart">
-        <h3>In this encounter</h3>
+        <div className="row">
+          <h3 className="spacer">In this encounter</h3>
+          {formatId && <DifficultyBadge formatId={formatId} members={members} />}
+        </div>
         {cart.lines.length === 0 && <p className="muted">Nothing added yet.</p>}
         {cart.lines.map((line) => {
           const t = lookup(line.templateId);

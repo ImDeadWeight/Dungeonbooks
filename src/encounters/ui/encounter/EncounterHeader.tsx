@@ -1,5 +1,5 @@
 /**
- * @file Main panel header: combat state icon, encounter name, round, and the
+ * @file Main panel header: combat state icon, encounter name, round, difficulty, and the
  * combat controls (Roll for Initiative / Next Turn, undo/redo, End Combat,
  * Reset, add characters).
  */
@@ -7,11 +7,13 @@ import { Redo2, Undo2, UserPlus } from 'lucide-react';
 import { rollForInitiative } from '../../domain/combat/initiative';
 import { endCombat, nextTurn, nextTurnBlockers, resetEncounter } from '../../domain/combat/turnFlow';
 import type { Encounter } from '../../domain/library/types';
+import { useTemplateLookup } from '../../state/characterStore';
 import { redoCombat, runCombatAction, runCombatBoundary, undoCombat, useHistoryLabels } from '../../state/combatStore';
 import { useUi } from '../../state/uiStore';
 import { useCombatRules } from '../../state/useCombatRules';
 import { confirmThen } from '../common/ConfirmDialog';
 import { CrossedSwordsIcon, SheathedSwordsIcon } from '../common/SwordIcons';
+import { DifficultyBadge } from '../difficulty/DifficultyBadge';
 
 /** Header and controls for one encounter. */
 export function EncounterHeader({ encounter }: { encounter: Encounter }) {
@@ -19,6 +21,11 @@ export function EncounterHeader({ encounter }: { encounter: Encounter }) {
   const { undoLabel, redoLabel } = useHistoryLabels(encounter.id);
   const { active, round } = encounter.combat;
   const blockers = nextTurnBlockers(encounter, useCombatRules(encounter.formatId));
+  const lookup = useTemplateLookup();
+  const members = encounter.combatants.flatMap((c) => {
+    const template = lookup(c.templateId);
+    return template ? [{ template, side: c.side }] : [];
+  });
 
   // Start combat: NPCs roll, PCs are prompted.
   const roll = () => runCombatBoundary(encounter.id, (enc, rules) => rollForInitiative(enc, rules));
@@ -40,6 +47,7 @@ export function EncounterHeader({ encounter }: { encounter: Encounter }) {
       </span>
       <h2>{encounter.name}</h2>
       {active && round > 0 && <span className="round muted">Round {round}</span>}
+      <DifficultyBadge formatId={encounter.formatId} members={members} />
       <span className="spacer" />
       <button className="icon" title="Add characters" onClick={() => openModal({ type: 'addToEncounter', encounterId: encounter.id })}>
         <UserPlus size={20} />

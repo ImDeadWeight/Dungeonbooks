@@ -30,3 +30,14 @@ Dungeon Books is compatible with fifth edition. The creature data was converted 
 > WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
 > COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
 > OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+## Encounter difficulty
+
+The 5e ratings use the XP Budget per Character and Experience Points by Challenge Rating tables from the System
+Reference Document 5.2.1 by Wizards of the Coast LLC, licensed under CC-BY-4.0 (notice above).
+
+The PF2e and SF2e threat ratings use the encounter budget and creature XP tables from Pathfinder GM Core. This product
+is licensed under the ORC License located at the Library of Congress at TX 9-307-067 and available online at various
+locations including www.paizo.com/orclicense, www.azoralaw.com/orclicense, and others. All warranties are disclaimed as
+set forth therein. Attribution: this product is based on the following Licensed Material: Pathfinder GM Core,
+© 2023 Paizo Inc. Reserved Material: none. Expressly designated Licensed Material: none.

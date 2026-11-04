@@ -151,3 +151,10 @@
     min-height: 44px;
   }
 }
+
+.campaign-party .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}

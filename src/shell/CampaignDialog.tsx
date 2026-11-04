@@ -1,22 +1,25 @@
 /**
- * @file A campaign's settings: its name and default format, exporting its
+ * @file A campaign's settings: its name, default format and usual party, exporting its
  * encounters or its notes, and deleting it (after asking).
  */
 import type { FormatId } from 'campaign-link/formats/formatIds';
 import { Download, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useCampaigns } from '../campaigns/campaignStore';
-import { deleteCampaign, renameCampaign, setCampaignFormat } from '../campaigns/lifecycle';
+import { deleteCampaign, renameCampaign, setCampaignFormat, setCampaignParty } from '../campaigns/lifecycle';
+import type { PartySize } from '../campaigns/types';
 import { exportItems } from '../encounters/state/transferActions';
 import { exportNotebook } from '../lorekeeper/state/notebooks';
 import { Modal } from '../ui/Modal';
 import { CampaignFormatField } from './CampaignFormatField';
+import { CampaignPartyField } from './CampaignPartyField';
 
 /** Settings for one campaign; switches to an are-you-sure step before deleting. */
 export function CampaignDialog({ id, close }: { id: string; close(): void }) {
   const campaign = useCampaigns((s) => s.campaigns.find((c) => c.id === id));
   const [name, setName] = useState(campaign?.name ?? '');
   const [formatId, setFormatId] = useState<FormatId | null>(campaign?.formatId ?? null);
+  const [party, setParty] = useState<PartySize | null>(campaign?.party ?? null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   if (!campaign) return null;
 
@@ -50,11 +53,12 @@ export function CampaignDialog({ id, close }: { id: string; close(): void }) {
     );
   }
 
-  // Apply the name and format, then close.
+  // Apply the name, format and party, then close.
   const save = () => {
     if (!name.trim()) return;
     if (name.trim() !== campaign.name) renameCampaign(id, name);
     if (formatId !== campaign.formatId) setCampaignFormat(id, formatId);
+    if (JSON.stringify(party) !== JSON.stringify(campaign.party ?? null)) setCampaignParty(id, party);
     close();
   };
 
@@ -76,6 +80,7 @@ export function CampaignDialog({ id, close }: { id: string; close(): void }) {
           <input autoFocus value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && save()} />
         </label>
         <CampaignFormatField value={formatId} onChange={setFormatId} />
+        <CampaignPartyField value={party} onChange={setParty} />
         <div className="campaign-dialog-exports">
           <button onClick={() => exportItems({ kind: 'campaign', id, name: campaign.name })} title="Its areas and encounters, with the characters in them">
             <Download size={15} /> Export encounters…
