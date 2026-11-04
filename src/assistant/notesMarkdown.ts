@@ -34,9 +34,10 @@ export function describeType(page: Page, pages: Page[]): string {
   return parent ? `${label} inside ${parent.title}` : label;
 }
 
-/** An image in words (its pixels aren't shared): its caption, and the pages pinned on it if it's a map. */
-export function describeImage(image: ImageBox, pages: Page[]): string {
-  const caption = image.caption ? `Image: "${image.caption}"` : 'Image (no caption)';
+/** An image in words (its pixels aren't shared): its number on the page, caption, and the pages pinned on it if it's a map. */
+export function describeImage(image: ImageBox, pages: Page[], number?: number): string {
+  const name = number ? `Image ${number}` : 'Image';
+  const caption = image.caption ? `${name}: "${image.caption}"` : `${name} (no caption)`;
   const pinned = (image.pins ?? []).map((pin) => pages.find((p) => p.id === pin.pageId)?.title).filter(Boolean);
   return pinned.length ? `${caption}, a map with pins for ${pinned.join(', ')}` : caption;
 }

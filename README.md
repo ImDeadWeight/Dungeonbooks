@@ -61,7 +61,9 @@ notes as they were is kept as `notebook-<campaign id>.before-format-2.json`.
 
 **Connect AI** (desktop app, top bar) lets AI apps that speak the Model Context Protocol work with the open campaign's
 notes: get an overview, search, read pages as Markdown, create pages, add or replace text, change a page's details and
-link mentions. They can't delete pages, and each change can be undone (Settings → AI changes, or the notice that shows when one happens). Connections are off until switched on there;
+link mentions. On maps they can look at the picture (with a grid and numbered pins, for models that see images), add,
+move and remove pins, and set captions. They can also look at the Encounters tab without changing it: list and read
+encounters, search and read creatures (the user's NPCs and the SRD's), and rate a planned fight. They can't delete pages, and each change can be undone (Settings → AI changes, or the notice that shows when one happens). Connections are off until switched on there;
 the dialog gives the setup to paste:
 
 - Claude Desktop and Claude Code start the app's executable with `--mcp-stdio`, which relays to the running app (and
@@ -124,7 +126,8 @@ The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the a
   apps used to write to the shared folder), and the showing tab plus opening things in the other one (`navigation.ts`).
 - `src/shell/`: the window: both tabs, the tab switch, the campaign menu and dialog, the Connect AI dialog, window
   controls.
-- `src/assistant/`: what AI apps can do (`notesTools.ts`), notes as Markdown and back (`markdown.ts`,
+- `src/assistant/`: what AI apps can do (`notesTools.ts` for the notes; `tools/` for maps, encounters and creatures,
+  all listed in `tools/index.ts`), notes as Markdown and back (`markdown.ts`,
   `notesMarkdown.ts`), and answering their MCP messages (`mcpServer.ts`, `connection.ts`). The native side,
   `src-tauri/src/mcp.rs`, runs the local server, hands each request to the web UI, and has the `--mcp-stdio` relay.
   The Assistant tab: `chat/` (chats, connections, running a chat), `models/` (finding servers, talking to them over

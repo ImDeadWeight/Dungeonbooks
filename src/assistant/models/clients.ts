@@ -89,7 +89,9 @@ function openAiMessages(system: string, messages: ChatMessage[]): object[] {
           : {}),
       });
     } else {
-      for (const r of m.results) out.push({ role: 'tool', tool_call_id: r.callId, content: r.text });
+      // Tool messages here carry text only, so a picture is described instead.
+      for (const r of m.results) out.push({ role: 'tool', tool_call_id: r.callId, content: r.image ? `${r.text}
+(The picture can't be sent to this model; use the coordinates above.)` : r.text });
     }
   }
   return out;
@@ -138,7 +140,9 @@ async function openAiChat(req: ChatRequest): Promise<ChatReply> {
 
 /** Messages in Anthropic's format: tool calls are content blocks, and their results go back as the user's. */
 function anthropicMessages(messages: ChatMessage[]): object[] {
-  return messages.map((m) => {
+  // Pictures go with the latest tool results only; earlier ones were seen already, and resending them costs tokens.
+  const latestTools = messages.map((m) => m.role).lastIndexOf('tool');
+  return messages.map((m, i) => {
     if (m.role === 'user') return { role: 'user', content: m.text };
     if (m.role === 'assistant') {
       const content: object[] = [];
@@ -146,7 +150,17 @@ function anthropicMessages(messages: ChatMessage[]): object[] {
       for (const c of m.toolCalls) content.push({ type: 'tool_use', id: c.id, name: c.name, input: c.args ?? {} });
       return { role: 'assistant', content: content.length ? content : [{ type: 'text', text: '…' }] };
     }
-    return { role: 'user', content: m.results.map((r) => ({ type: 'tool_result', tool_use_id: r.callId, content: r.text, is_error: r.isError })) };
+    return {
+      role: 'user',
+      content: m.results.map((r) => ({
+        type: 'tool_result',
+        tool_use_id: r.callId,
+        content: r.image && i === latestTools
+          ? [{ type: 'image', source: { type: 'base64', media_type: r.image.mimeType, data: r.image.data } }, { type: 'text', text: r.text }]
+          : r.text,
+        is_error: r.isError,
+      })),
+    };
   });
 }
 

@@ -12,11 +12,11 @@ import { changeDetails, describeCall } from '../chat/describeCall';
 import { useAssistantSettings } from '../chat/settings';
 import { listModels } from '../models/clients';
 import type { ChatMessage, ToolCall, ToolResult } from '../models/types';
-import { NOTES_TOOLS } from '../notesTools';
+import { toolNamed } from '../tools';
 import { UndoChangeButton } from '../../shell/aiChanges/UndoChangeButton';
 import { MarkdownText } from './MarkdownText';
 
-const isChange = (call: ToolCall) => !NOTES_TOOLS.find((t) => t.name === call.name)?.readOnly;
+const isChange = (call: ToolCall) => !toolNamed(call.name)?.readOnly;
 
 /** The connection and model pickers. */
 function ModelPicker({ showModels }: { showModels: () => void }) {

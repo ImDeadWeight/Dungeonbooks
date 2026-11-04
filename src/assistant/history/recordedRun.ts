@@ -6,13 +6,13 @@
 import { newId } from '../../lorekeeper/domain/ids';
 import { useNotebook } from '../../lorekeeper/state/notebookStore';
 import { describeCall } from '../chat/describeCall';
-import type { Tool } from '../notesTools';
+import type { Tool, ToolOutput } from '../tools/types';
 import { captureChange, changedSince, undoChange, type AiChangeSource } from './aiChanges';
 import { markUndone, recordChange, useAiChanges } from './aiChangeStore';
 
 /** What a call returned, and the change it recorded (none when it only looked, or changed nothing). */
 export interface RecordedResult {
-  text: string;
+  output: ToolOutput;
   changeId?: string;
 }
 
@@ -21,16 +21,21 @@ const contents = () => {
   return { folders, pages };
 };
 
-/** Runs a tool; when it changes the notes, records the change. Throws what the tool throws. */
-export function runRecorded(tool: Tool, args: Record<string, unknown>, source: AiChangeSource): RecordedResult {
-  if (tool.readOnly) return { text: tool.run(args) };
+/**
+ * Runs a tool; when it changes the notes, records the change. Throws what
+ * the tool throws. Looking may take time; a change must happen at once, so
+ * nothing the user does can slip in between the before and after.
+ */
+export async function runRecorded(tool: Tool, args: Record<string, unknown>, source: AiChangeSource): Promise<RecordedResult> {
+  if (tool.readOnly) return { output: await tool.run(args) };
   const before = contents();
-  const text = tool.run(args);
+  const output = tool.run(args);
+  if (output instanceof Promise) throw new Error(`${tool.name} changes the notes, so it must not wait.`);
   const label = describeCall({ id: '', name: tool.name, args, rawArgs: '' });
   const change = captureChange(before, contents(), { id: newId(), at: Date.now(), source, label });
-  if (!change) return { text };
+  if (!change) return { output };
   recordChange(change);
-  return { text, changeId: change.id };
+  return { output, changeId: change.id };
 }
 
 /** Why an undo didn't happen: the change is gone, already undone, or its pages were edited since (titles). */

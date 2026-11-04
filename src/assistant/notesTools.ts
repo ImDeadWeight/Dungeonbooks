@@ -34,34 +34,12 @@ import { backlinksOf } from '../lorekeeper/state/backlinkIndex';
 import { useNotebook } from '../lorekeeper/state/notebookStore';
 import { fromMarkdown, toMarkdown } from './markdown';
 import { describeImage, describeType, linkNames } from './notesMarkdown';
-
-/** A mistake in what the AI asked for; the message goes back to it. */
-export class ToolError extends Error {}
-
-/** An action an AI app can take, described for it (name, what it does, its arguments as JSON Schema). */
-export interface Tool {
-  name: string;
-  title: string;
-  description: string;
-  inputSchema: { type: 'object'; properties: Record<string, unknown>; required?: string[] };
-  /** Only looks; changes nothing. */
-  readOnly?: boolean;
-  run(args: Record<string, unknown>): string;
-}
+import { findPage } from './tools/findPage';
+import { ToolError, type Tool } from './tools/types';
 
 // ---- Looking things up -------------------------------------------------------
 
 const notebook = () => useNotebook.getState();
-
-/** The page an argument names, or an error that suggests close names. */
-function findPage(name: unknown): Page {
-  if (typeof name !== 'string' || !name.trim()) throw new ToolError('Name the page by its title (or an alias, or its id).');
-  const id = linkNames().pageNamed(name.trim());
-  const page = id && notebook().pages.find((p) => p.id === id);
-  if (page) return page;
-  const close = searchPages(name, searchablePages(notebook().pages), { currentPageId: '', folderId: null, recentPageIds: [] }, 5);
-  throw new ToolError(`No page is called "${name}".${close.length ? ` Close names: ${close.map((r) => `"${r.name}"`).join(', ')}.` : ''}`);
-}
 
 /** "Places/Cities" for a folder; '' for the top level. */
 function folderPath(folders: Folder[], folderId: Id | null): string {
@@ -285,7 +263,7 @@ export const NOTES_TOOLS: Tool[] = [
     name: 'read_page',
     title: 'Read a page',
     description:
-      'A page as Markdown: its title, type, aliases, where it sits (folder, or the page it is under), the pages under it and the pages linking to it, then each text box, numbered (pages are free canvases holding several boxes). Links to pages show as [[Title]].',
+      'A page as Markdown: its title, type, aliases, where it sits (folder, or the page it is under), the pages under it and the pages linking to it, its images (numbered, with their pins; see view_image), then each text box, numbered (pages are free canvases holding several boxes). Links to pages show as [[Title]].',
     inputSchema: { type: 'object', properties: { page: PAGE_ARG }, required: ['page'] },
     readOnly: true,
     run({ page: name }) {
@@ -302,7 +280,7 @@ export const NOTES_TOOLS: Tool[] = [
       }
       const { linkedFrom } = backlinksOf(pages, page.id);
       if (linkedFrom.length) lines.push(`Linked from: ${linkedFrom.map((b) => b.page.title).join(', ')}`);
-      for (const image of page.images ?? []) lines.push(describeImage(image, pages));
+      (page.images ?? []).forEach((image, i) => lines.push(describeImage(image, pages, i + 1)));
       if (page.statBlock) lines.push('Has a stat block.');
       if (!page.boxes.length) lines.push('', '(No text yet.)');
       page.boxes.forEach((box, i) => lines.push('', `--- Text box ${i + 1} ---`, boxMarkdown(box)));

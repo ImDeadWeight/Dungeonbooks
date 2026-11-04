@@ -7,7 +7,7 @@
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useAssistantSettings, type AppPermission, type ChatPermission } from '../assistant/chat/settings';
 import { aiConnectionsAvailable } from '../assistant/connection';
-import { NOTES_TOOLS } from '../assistant/notesTools';
+import { ALL_TOOLS } from '../assistant/tools';
 import { Modal } from '../ui/Modal';
 import { AiAppsSettings } from './AiConnect';
 import { AiChangesList } from './aiChanges/AiChangesList';
@@ -15,7 +15,7 @@ import { closeSettings, openSettings, useSettingsDialog, type SettingsSection } 
 import './settings.css';
 
 /** The tools that change the notes, each set on its own. */
-const CHANGES = NOTES_TOOLS.filter((t) => !t.readOnly);
+const CHANGES = ALL_TOOLS.filter((t) => !t.readOnly);
 
 const CHAT_CHOICES: { value: ChatPermission; label: string }[] = [
   { value: 'ask', label: 'Ask first' },
