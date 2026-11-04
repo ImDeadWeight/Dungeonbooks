@@ -1,0 +1,58 @@
+/* @file The compendium list: creature rows, their stat blocks, and the licence notice. */
+
+.compendium {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.compendium .filter-bar input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.compendium-type {
+  font-size: 12px;
+}
+
+.compendium-statblock {
+  padding: 8px 12px;
+  border-left: 2px solid var(--border);
+  margin: 4px 0 8px 18px;
+}
+
+.compendium-notice {
+  font-size: 12px;
+}
+
+.compendium-notice button.compendium-notice-toggle {
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+}
+
+.compendium-notice p {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.cart-source {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.cart-source button {
+  border: none;
+  border-radius: 0;
+  padding: 4px 10px;
+}
+
+.cart-source button.active {
+  background: var(--accent-soft);
+}

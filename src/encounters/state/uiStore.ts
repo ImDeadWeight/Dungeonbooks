@@ -26,6 +26,7 @@ export interface CreatePreset {
 export type Modal =
   | { type: 'create'; preset: CreatePreset }
   | { type: 'characters' }
+  | { type: 'compendium' }
   | { type: 'conditions' }
   | { type: 'editCondition'; conditionId: Id | null }
   | { type: 'editCharacter'; templateId: Id | null; defaultFormatId?: FormatId | null }

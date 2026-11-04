@@ -1,15 +1,19 @@
 /**
  * @file The encounter "shopping cart": search/filter characters of the
- * encounter's format on the left, chosen characters and quantities on the
- * right.
+ * encounter's format on the left (or, for formats with one, the compendium's
+ * creatures, copied into the library when added), chosen characters and
+ * quantities on the right.
  */
 import { Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { hasCompendium } from '../../domain/compendium/types';
 import { EMPTY_FILTER, filterTemplates } from '../../domain/characterSearch';
 import type { CharacterTemplate } from '../../domain/characters';
 import type { FormatId } from 'campaign-link/formats/formatIds';
 import { useCharacters } from '../../state/characterStore';
+import { libraryCopy } from '../../state/compendium';
 import { useUi } from '../../state/uiStore';
+import { CompendiumList } from '../compendium/CompendiumList';
 import { CharacterFilterBar } from '../characters/CharacterFilterBar';
 import { NumberInput } from 'campaign-link/ui/common/fields';
 import { QuantityPrompt } from './QuantityPrompt';
@@ -30,6 +34,8 @@ export function CartBuilder({ cart, alreadyIn = [], formatId }: Props) {
   const openModal = useUi((s) => s.openModal);
   const [filter, setFilter] = useState(EMPTY_FILTER);
   const [asking, setAsking] = useState<CharacterTemplate | null>(null);
+  const [source, setSource] = useState<'library' | 'compendium'>('library');
+  const showCompendium = source === 'compendium' && hasCompendium(formatId);
   const shown = filterTemplates(templates.filter((t) => t.formatId === formatId), filter);
   // Find a template by id.
   const lookup = (id: string) => templates.find((t) => t.id === id);
@@ -42,29 +48,52 @@ export function CartBuilder({ cart, alreadyIn = [], formatId }: Props) {
       <section className="cart-picker">
         <div className="row">
           <h3 className="spacer">Characters</h3>
+          {hasCompendium(formatId) && (
+            <div className="cart-source" role="tablist">
+              <button role="tab" aria-selected={!showCompendium} className={showCompendium ? undefined : 'active'} onClick={() => setSource('library')}>
+                Mine
+              </button>
+              <button role="tab" aria-selected={showCompendium} className={showCompendium ? 'active' : undefined} onClick={() => setSource('compendium')}>
+                SRD creatures
+              </button>
+            </div>
+          )}
           <button disabled={!formatId} onClick={() => openModal({ type: 'editCharacter', templateId: null, defaultFormatId: formatId })}>
             <Plus size={16} /> New character
           </button>
         </div>
-        <CharacterFilterBar filter={filter} onChange={setFilter} />
-        <div className="character-list">
-          {!formatId && <p className="empty-state">Pick the encounter's format to see its characters.</p>}
-          {formatId && shown.length === 0 && <p className="empty-state">No characters match.</p>}
-          {shown.map((t) => {
-            // A PC can only be in an encounter once.
-            const pcInCart =
-              t.kind === 'pc' && (alreadyIn.includes(t.id) || cart.lines.some((l) => l.templateId === t.id));
-            return (
-              <div key={t.id} className="character-item">
-                <span className="name">{t.name}</span>
-                <span className="chip">{t.kind === 'pc' ? 'PC' : 'NPC'}</span>
-                <button className="icon" title="Add to encounter" disabled={pcInCart} onClick={() => pick(t)}>
-                  <Plus size={18} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+        {showCompendium ? (
+          <CompendiumList
+            formatId={formatId}
+            action={(entry) => (
+              <button className="icon" title="Add to encounter" onClick={() => pick(libraryCopy(entry, formatId))}>
+                <Plus size={18} />
+              </button>
+            )}
+          />
+        ) : (
+          <>
+            <CharacterFilterBar filter={filter} onChange={setFilter} />
+            <div className="character-list">
+              {!formatId && <p className="empty-state">Pick the encounter's format to see its characters.</p>}
+              {formatId && shown.length === 0 && <p className="empty-state">No characters match.</p>}
+              {shown.map((t) => {
+                // A PC can only be in an encounter once.
+                const pcInCart =
+                  t.kind === 'pc' && (alreadyIn.includes(t.id) || cart.lines.some((l) => l.templateId === t.id));
+                return (
+                  <div key={t.id} className="character-item">
+                    <span className="name">{t.name}</span>
+                    <span className="chip">{t.kind === 'pc' ? 'PC' : 'NPC'}</span>
+                    <button className="icon" title="Add to encounter" disabled={pcInCart} onClick={() => pick(t)}>
+                      <Plus size={18} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </section>
       <section className="cart">
         <h3>In this encounter</h3>

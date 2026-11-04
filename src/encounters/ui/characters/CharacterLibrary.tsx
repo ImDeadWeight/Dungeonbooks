@@ -1,8 +1,8 @@
 /**
  * @file The Characters window: search/filter all characters, create, edit,
- * delete, and select several to export.
+ * delete, select several to export, and copy creatures in from the SRD.
  */
-import { Download, Pencil, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { EMPTY_FILTER, filterTemplates } from '../../domain/characterSearch';
 import type { CharacterTemplate } from '../../domain/characters';
@@ -68,6 +68,9 @@ export function CharacterLibrary() {
           <div className="spacer">
             <CharacterFilterBar filter={filter} onChange={setFilter} />
           </div>
+          <button title="Ready-made creatures from the open SRDs" onClick={() => openModal({ type: 'compendium' })}>
+            <BookOpen size={16} /> From the SRD
+          </button>
           <button className="primary" onClick={() => openModal({ type: 'editCharacter', templateId: null })}>
             <Plus size={16} /> New
           </button>

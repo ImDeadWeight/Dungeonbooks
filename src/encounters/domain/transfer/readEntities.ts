@@ -74,6 +74,7 @@ export function readTemplate(v: unknown, path: string): CharacterTemplate {
     statBlock: o.statBlock === null ? null : FORMATS[formatId].sanitizeStatBlock(o.statBlock, `${path}.statBlock`),
     // Only characters made from a Lorekeeper page have one; kept absent otherwise so backups stay exact.
     ...(o.lore !== undefined && { lore: readLoreRef(o.lore, `${path}.lore`) }),
+    ...(o.compendiumId !== undefined && { compendiumId: readString(o.compendiumId, `${path}.compendiumId`, 200) }),
   };
 }
 
