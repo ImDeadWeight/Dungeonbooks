@@ -28,8 +28,9 @@ const contents = () => {
  */
 export async function runRecorded(tool: Tool, args: Record<string, unknown>, source: AiChangeSource): Promise<RecordedResult> {
   if (tool.readOnly) return { output: await tool.run(args) };
+  const prepared = await tool.prepare?.(args);
   const before = contents();
-  const output = tool.run(args);
+  const output = tool.run(args, prepared);
   if (output instanceof Promise) throw new Error(`${tool.name} changes the notes, so it must not wait.`);
   const label = describeCall({ id: '', name: tool.name, args, rawArgs: '' });
   const change = captureChange(before, contents(), { id: newId(), at: Date.now(), source, label });

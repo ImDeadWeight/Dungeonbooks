@@ -20,14 +20,19 @@ function changeImage(pageId: Id, boxId: Id, change: (image: ImageBox) => ImageBo
   changePage(pageId, (p) => withImages(p, (images) => images.map((i) => (i.id === boxId ? change(i) : i))));
 }
 
+/** Puts an already stored image on a page at (x, y); returns the new image box's id. */
+export function placeImage(pageId: Id, imageId: string, x: number, y: number, caption?: string): Id {
+  const box: ImageBox = { id: newId(), x, y, width: NEW_IMAGE_WIDTH, imageId, ...(caption?.trim() ? { caption: caption.trim() } : {}) };
+  changePage(pageId, (p) => withImages(p, (images) => [...images, box]));
+  return box.id;
+}
+
 /** Stores pictures and places them on a page from (x, y), each below the last; reports what fails. */
 export async function addImages(pageId: Id, files: Blob[], x: number, y: number): Promise<void> {
   let top = y;
   for (const file of files) {
     try {
-      const imageId = await storeImage(file);
-      const box: ImageBox = { id: newId(), x, y: top, width: NEW_IMAGE_WIDTH, imageId };
-      changePage(pageId, (p) => withImages(p, (images) => [...images, box]));
+      placeImage(pageId, await storeImage(file), x, top);
       top += 40;
     } catch (err) {
       useUi.getState().notifyError(`Could not add the image: ${(err as Error).message}`);

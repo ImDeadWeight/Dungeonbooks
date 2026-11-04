@@ -29,5 +29,11 @@ export interface Tool {
   inputSchema: { type: 'object'; properties: Record<string, unknown>; required?: string[] };
   /** Only looks; changes nothing. Only these may take time (load data); changes run at once, so undo can record them. */
   readOnly?: boolean;
-  run(args: Record<string, unknown>): ToolOutput | Promise<ToolOutput>;
+  /**
+   * Work a change needs done first that may take time and doesn't touch the
+   * notes (storing a picture); its result is passed to run, which then makes
+   * the change at once.
+   */
+  prepare?(args: Record<string, unknown>): Promise<unknown>;
+  run(args: Record<string, unknown>, prepared?: unknown): ToolOutput | Promise<ToolOutput>;
 }

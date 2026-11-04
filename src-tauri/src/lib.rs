@@ -3,6 +3,8 @@
 //! the AI connection on desktop, and starts the Tauri app that hosts the web UI.
 
 #[cfg(desktop)]
+mod image_file;
+#[cfg(desktop)]
 mod mcp;
 mod network;
 
@@ -42,6 +44,7 @@ pub fn run() {
                 mcp::ai_connection_status,
                 mcp::ai_connection_set_enabled,
                 mcp::ai_connection_new_token,
+                image_file::read_image_file,
             ]);
     }
     // Mobile has no AI connection server, only the network lookup.

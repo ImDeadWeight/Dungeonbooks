@@ -54,6 +54,25 @@ export function imageMime(imageId: string): string {
   return { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }[ext ?? ''] ?? 'application/octet-stream';
 }
 
+/** The image type the bytes start like (PNG, JPEG, GIF or WebP), or null for anything else. */
+export function sniffImageType(bytes: Uint8Array): string | null {
+  const starts = (...b: number[]) => b.every((v, i) => bytes[i] === v);
+  if (starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) return 'image/png';
+  if (starts(0xff, 0xd8, 0xff)) return 'image/jpeg';
+  if (starts(0x47, 0x49, 0x46, 0x38)) return 'image/gif';
+  if (starts(0x52, 0x49, 0x46, 0x46) && String.fromCharCode(...bytes.subarray(8, 12)) === 'WEBP') return 'image/webp';
+  return null;
+}
+
+const NEW_IMAGE_LEFT = 40;
+const NEW_IMAGE_GAP = 40;
+
+/** A spot for something new below every box and image on the page (images count as tall as they are wide, roughly). */
+export function belowEverything(page: Page): { x: number; y: number } {
+  const bottoms = [...page.boxes.map((b) => b.y + 80), ...(page.images ?? []).map((i) => i.y + i.width)];
+  return { x: NEW_IMAGE_LEFT, y: bottoms.length ? Math.max(...bottoms) + NEW_IMAGE_GAP : NEW_IMAGE_LEFT };
+}
+
 /** A stored image id: the content's hash and its extension, so the same picture is stored once. */
 export const imageIdFor = (hashHex: string, ext: string) => `${hashHex}.${ext}`;
 

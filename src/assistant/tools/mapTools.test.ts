@@ -47,3 +47,28 @@ describe('map tools', () => {
     await expect(run('add_pin', { page: 'Atlas', image: 2, x: 0, y: 0, pin_page: 'Atlas' })).rejects.toThrow('from 1 to 1');
   });
 });
+
+describe('adding images', () => {
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
+  it('places a stored image below what is on the page, with its caption', async () => {
+    const tool = toolNamed('add_image')!;
+    const imageId = `${'b'.repeat(64)}.png`;
+    expect(await tool.run({ page: 'Atlas', caption: 'Old map' }, imageId)).toBe('Added image 2 to "Atlas".');
+    expect(atlas().images![1]).toMatchObject({ imageId, caption: 'Old map', x: 40 });
+    expect(atlas().images![1].y).toBeGreaterThan(atlas().images![0].y);
+  });
+
+  it('takes exactly one source, and only real images', async () => {
+    const { loadImageArg } = await import('./imageSource');
+    await expect(loadImageArg({})).rejects.toThrow('exactly one of path');
+    await expect(loadImageArg({ url: 'ftp://x', data: png })).rejects.toThrow('exactly one of path');
+    await expect(loadImageArg({ url: 'file:///C:/x.png' })).rejects.toThrow('http:// or https://');
+    await expect(loadImageArg({ data: btoa('not an image') })).rejects.toThrow('isn\u2019t a PNG');
+    expect((await loadImageArg({ data: `data:image/png;base64,${png}` })).type).toBe('image/png');
+  });
+
+  it('checks the page before fetching anything', async () => {
+    await expect(toolNamed('add_image')!.prepare!({ page: 'Nowhere', data: png })).rejects.toThrow('No page is called "Nowhere"');
+  });
+});

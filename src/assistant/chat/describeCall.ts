@@ -27,6 +27,8 @@ export function describeCall(call: ToolCall): string {
       return `Change ${page}`;
     case 'link_mentions':
       return `Link mentions on ${page}`;
+    case 'add_image':
+      return `Add an image to ${page}${a.path ? ` from ${str(a.path)}` : a.url ? ` from ${str(a.url)}` : ''}`;
     case 'view_image':
       return `Look at the image on ${page}`;
     case 'add_pin':
@@ -52,11 +54,14 @@ export function describeCall(call: ToolCall): string {
   }
 }
 
+/** Long values (a picture as base64) shown by their size instead. */
+const shorten = (text: string) => (text.length > 300 ? `(${text.length.toLocaleString()} characters)` : text);
+
 /** The details of a change worth showing before allowing it: the text it writes, and its other settings. */
 export function changeDetails(call: ToolCall): { text: string | null; fields: [string, string][] } {
   const a = call.args ?? {};
   const fields = Object.entries(a)
     .filter(([key]) => key !== 'text' && key !== 'page')
-    .map(([key, value]): [string, string] => [key.replace(/_/g, ' '), Array.isArray(value) ? value.join(', ') : String(value)]);
+    .map(([key, value]): [string, string] => [key.replace(/_/g, ' '), shorten(Array.isArray(value) ? value.join(', ') : String(value))]);
   return { text: typeof a.text === 'string' ? a.text : null, fields };
 }

@@ -5,20 +5,12 @@
  */
 import { useEffect, type DragEvent } from 'react';
 import type { Id } from '../../domain/ids';
+import { belowEverything } from '../../domain/images';
 import type { Page } from '../../domain/notebook';
 import { addImages } from '../../state/imageActions';
 import { useNotebook } from '../../state/notebookStore';
 
-const LEFT = 40;
-const GAP = 40;
-
 const imagesIn = (files: FileList | null | undefined) => [...(files ?? [])].filter((f) => f.type.startsWith('image/'));
-
-/** A spot below every box and image on the page (images count as tall as they are wide, roughly). */
-export function belowEverything(page: Page): { x: number; y: number } {
-  const bottoms = [...page.boxes.map((b) => b.y + 80), ...(page.images ?? []).map((i) => i.y + i.width)];
-  return { x: LEFT, y: bottoms.length ? Math.max(...bottoms) + GAP : LEFT };
-}
 
 /** Asks for image files and puts them on the page. */
 export function pickImages(pageId: Id) {
