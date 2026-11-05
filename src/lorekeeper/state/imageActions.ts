@@ -48,6 +48,11 @@ export function updateImage(pageId: Id, boxId: Id, patch: Partial<Pick<ImageBox,
   });
 }
 
+/** Shows another stored picture in an image box, keeping its place, size, caption and pins (pins are fractions, so they stay put). */
+export function setImageFile(pageId: Id, boxId: Id, imageId: string) {
+  changeImage(pageId, boxId, (i) => ({ ...i, imageId }));
+}
+
 export function deleteImage(pageId: Id, boxId: Id) {
   changePage(pageId, (p) => withImages(p, (images) => images.filter((i) => i.id !== boxId)));
 }

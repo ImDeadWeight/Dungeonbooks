@@ -1,97 +1,16 @@
 /**
- * @file What AI apps can do with images and maps on pages: add one (from a
- * file, a web address or base64), look at one (as a picture with a grid and
- * numbered pins), pin pages on it, move and remove pins, and caption it. Images are numbered per page as read_page lists
- * them; pins per image as view_image lists them. Spots are x and y
- * fractions of the image (0,0 top left; 1,1 bottom right).
+ * @file What AI apps can do with maps on pages: look at an image (as a
+ * picture with a grid and numbered pins), pin pages on it, move and remove
+ * pins, and caption it. Adding pictures is imageTools.ts.
  */
-import { belowEverything, clampFraction } from '../../lorekeeper/domain/images';
-import type { ImageBox, MapPin, Page } from '../../lorekeeper/domain/notebook';
-import { addPin, movePin, placeImage, removePin, updateImage } from '../../lorekeeper/state/imageActions';
-import { storeImage } from '../../lorekeeper/state/imageFiles';
+import { addPin, movePin, removePin, updateImage } from '../../lorekeeper/state/imageActions';
 import { useNotebook } from '../../lorekeeper/state/notebookStore';
 import { findPage } from './findPage';
-import { loadImageArg } from './imageSource';
+import { IMAGE_ARG, imageName, PAGE_ARG, PIN_ARG, pinArg, spot, SPOT_ARGS, spotArg, target } from './imageArgs';
 import { mapPicture } from './mapPicture';
 import { ToolError, type Tool } from './types';
 
-const PAGE_ARG = { type: 'string', description: 'The page the image is on: its title, an alias, or its id.' };
-const IMAGE_ARG = { type: 'integer', minimum: 1, description: 'The image number from read_page; may be left out when the page has one image.' };
-const PIN_ARG = { type: 'integer', minimum: 1, description: 'The pin number from view_image.' };
-const SPOT_ARGS = {
-  x: { type: 'number', minimum: 0, maximum: 1, description: 'Across the image: 0 is the left edge, 1 the right (view_image draws grid lines every 0.1).' },
-  y: { type: 'number', minimum: 0, maximum: 1, description: 'Down the image: 0 is the top edge, 1 the bottom.' },
-};
-
-/** The image an argument picks on a page. */
-function imageArg(page: Page, value: unknown): ImageBox {
-  const images = page.images ?? [];
-  if (!images.length) throw new ToolError(`"${page.title}" has no images.`);
-  if (value === undefined && images.length === 1) return images[0];
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > images.length) {
-    throw new ToolError(`image must be an image number from 1 to ${images.length} (read_page lists them).`);
-  }
-  return images[value - 1];
-}
-
-/** The pin an argument picks on an image. */
-function pinArg(image: ImageBox, value: unknown): MapPin {
-  const pins = image.pins ?? [];
-  if (!pins.length) throw new ToolError('That image has no pins yet.');
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > pins.length) {
-    throw new ToolError(`pin must be a pin number from 1 to ${pins.length} (view_image lists them).`);
-  }
-  return pins[value - 1];
-}
-
-/** A spot from x and y arguments. */
-function spotArg(args: Record<string, unknown>): { x: number; y: number } {
-  const { x, y } = args;
-  if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
-    throw new ToolError('x and y must be numbers from 0 to 1.');
-  }
-  return { x: clampFraction(x), y: clampFraction(y) };
-}
-
-const spot = (p: { x: number; y: number }) => `(${p.x.toFixed(2)}, ${p.y.toFixed(2)})`;
-const imageName = (page: Page, image: ImageBox) => (image.caption ? `the map "${image.caption}" on "${page.title}"` : `the image on "${page.title}"`);
-
-/** The page and image named by the arguments, read fresh from the notes. */
-function target(args: Record<string, unknown>) {
-  const page = findPage(args.page);
-  return { page, image: imageArg(page, args.image) };
-}
-
 export const MAP_TOOLS: Tool[] = [
-  {
-    name: 'add_image',
-    title: 'Add an image to a page',
-    description:
-      'Puts a picture on a page, below what is there, from exactly one of: path (a PNG, JPEG, WebP or GIF file on this computer, by its full path), url (a web address of an image), or data (the image as base64). Up to 25 MB; very large pictures are scaled down. It can then be used as a map (view_image, add_pin).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        page: { type: 'string', description: 'The page to put it on: its title, an alias, or its id.' },
-        path: { type: 'string', description: 'Full path of an image file on this computer.' },
-        url: { type: 'string', description: 'Web address of an image.' },
-        data: { type: 'string', description: 'The image as base64.' },
-        caption: { type: 'string', description: 'Shown under it (and the map’s name).' },
-      },
-      required: ['page'],
-    },
-    async prepare(args) {
-      // The page first, so a wrong name fails before anything is downloaded or stored.
-      findPage(args.page);
-      return storeImage(await loadImageArg(args));
-    },
-    run(args, imageId) {
-      const page = findPage(args.page);
-      const at = belowEverything(page);
-      placeImage(page.id, imageId as string, at.x, at.y, typeof args.caption === 'string' ? args.caption : undefined);
-      const number = (page.images?.length ?? 0) + 1;
-      return `Added image ${number} to "${page.title}".`;
-    },
-  },
   {
     name: 'view_image',
     title: 'Look at an image or map',
