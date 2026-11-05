@@ -1,0 +1,36 @@
+/* @file The new-version notice (bottom left, clear of the AI change notice on the right) and Settings → Updates. */
+
+.update-toast {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-width: min(460px, calc(100vw - 32px));
+  padding: 8px 8px 8px 14px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.update-toast-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.updates-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+.updates-error {
+  color: var(--damage-hover);
+  overflow-wrap: anywhere;
+}

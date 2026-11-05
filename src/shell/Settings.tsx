@@ -2,13 +2,16 @@
  * @file The Settings button and dialog: a tab per section. Assistant: what
  * the Assistant tab's model may change in the notes. AI apps (desktop app):
  * connecting apps like Claude, and what they may change. AI changes: what
- * they changed, with Undo.
+ * they changed, with Undo. Updates (desktop app): the version, and
+ * checking for a new one.
  */
 import { Settings as SettingsIcon } from 'lucide-react';
 import { useAssistantSettings, type AppPermission, type ChatPermission } from '../assistant/chat/settings';
 import { aiConnectionsAvailable } from '../assistant/connection';
 import { ALL_TOOLS } from '../assistant/tools';
 import { Modal } from '../ui/Modal';
+import { updatesAvailable } from '../updates/updateStore';
+import { UpdatesSection } from '../updates/UpdatesSection';
 import { AiAppsSettings } from './AiConnect';
 import { AiChangesList } from './aiChanges/AiChangesList';
 import { closeSettings, openSettings, useSettingsDialog, type SettingsSection } from './settingsDialog';
@@ -94,17 +97,19 @@ function AiAppsSection() {
   );
 }
 
-/** The sections this device has (AI apps connect to the desktop app only). */
+/** The sections this device has (AI apps connect to, and updates come to, the desktop app only). */
 const sections = (): { id: SettingsSection; label: string }[] => [
   { id: 'assistant', label: 'Assistant' },
   ...(aiConnectionsAvailable() ? [{ id: 'ai-apps' as const, label: 'AI apps' }] : []),
   { id: 'ai-changes', label: 'AI changes' },
+  ...(updatesAvailable() ? [{ id: 'updates' as const, label: 'Updates' }] : []),
 ];
 
 const SECTIONS: Record<SettingsSection, () => JSX.Element> = {
   assistant: AssistantSection,
   'ai-apps': AiAppsSection,
   'ai-changes': AiChangesList,
+  updates: UpdatesSection,
 };
 
 /** The dialog, while it is open; drawn once, by the shell. */

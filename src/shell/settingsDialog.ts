@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 
 /** The dialog's sections, one tab each. */
-export type SettingsSection = 'assistant' | 'ai-apps' | 'ai-changes';
+export type SettingsSection = 'assistant' | 'ai-apps' | 'ai-changes' | 'updates';
 
 export const useSettingsDialog = create<{ section: SettingsSection | null }>(() => ({ section: null }));
 

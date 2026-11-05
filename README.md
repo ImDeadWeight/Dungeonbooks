@@ -83,6 +83,10 @@ LM Studio shared to the network; a phone looks on the network. Servers can also 
 used with an Anthropic or OpenAI API key (paid per use). Reading and searching happen straight away; each change waits
 for Allow or Skip unless allowed for the whole chat, and shows Undo once made. Chats, connections and keys are saved on the device.
 
+**Updates.** The desktop app checks GitHub Releases for a new version a few seconds after it starts and, when one is
+out, offers **Update and restart** in a notice at the bottom left; **Settings → Updates** shows the version and checks
+on request. Android updates by installing the new APK.
+
 Built with Tauri 2 + React + TypeScript, from the Encounters and Lorekeeper code; the shared game formats and catalogue
 formats still come from the [campaign-link](https://github.com/ImDeadWeight/campaign-link) package.
 
@@ -126,6 +130,28 @@ The `.dmg` (for Apple silicon and Intel Macs) lands in `src-tauri/target/univers
 `src-tauri/tauri.macos.conf.json` keeps the native window buttons over the top bar's left end. The build isn't
 signed, so the first time on another Mac open it with right-click → Open (or System Settings → Privacy & Security →
 Open Anyway). Data is under `~/Library/Application Support/com.dungeonbooks.app/data/`.
+
+### Releases
+
+Bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, commit, then push a tag
+for it:
+
+```sh
+git tag v0.3.1 && git push origin v0.3.1
+```
+
+`.github/workflows/release.yml` builds the Windows setup `.exe` and a universal macOS `.dmg` into a **draft** release,
+with the signed update files and `latest.json`. Write the notes, attach the Android APK, and publish it: installed
+copies offer the update once it is published (they read
+`https://github.com/ImDeadWeight/Dungeonbooks/releases/latest/download/latest.json`).
+
+Updates are signed with the updater key: the public half is in `tauri.conf.json`, the private half is the
+`TAURI_SIGNING_PRIVATE_KEY` repository secret, and a copy is kept at `C:/Users/plcar/.tauri/dungeon-books-updater.key`.
+Don't lose it: installed copies only accept updates signed with it. A local `npm run tauri build` (Windows or macOS) needs it too:
+
+```sh
+TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/dungeon-books-updater.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run tauri build
+```
 
 **Android** (same one-time setup as Encounters' README describes):
 

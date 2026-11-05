@@ -2,7 +2,8 @@
  * @file App entry point: loads global styles; on first start copies the
  * separate apps' data in and makes one campaign list; loads the campaigns and
  * both tabs' data, then renders the shell (or an error message if loading
- * fails), connects the tabs, and starts answering AI apps.
+ * fails), connects the tabs, starts answering AI apps, and (desktop) checks
+ * for a new version.
  */
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -28,6 +29,7 @@ import { copyOldApps } from './migration/copyOldApps';
 import { unifyCampaigns } from './migration/unifyCampaigns';
 import { hasMacTitleBar } from './platform';
 import { Shell } from './shell/Shell';
+import { startUpdates } from './updates/updateStore';
 import './styles/theme.css';
 import './styles/controls.css';
 
@@ -78,6 +80,7 @@ load()
     startEncountersLinks();
     startLorekeeperLinks();
     void startAiConnection();
+    startUpdates();
   })
   .catch((err: Error) => {
     root.render(<p className="empty-state">Dungeon Books could not load its data: {err.message}</p>);

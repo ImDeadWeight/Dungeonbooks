@@ -1,0 +1,65 @@
+# Builds the desktop app for a release when a version tag (v0.3.1, ...) is pushed:
+#   Windows - the setup .exe
+#   macOS   - one universal .dmg (Apple silicon and Intel)
+# Each build's update files are signed with the updater key (the TAURI_SIGNING_PRIVATE_KEY secret), and
+# latest.json, which installed copies read to find a new version, is uploaded with them. Everything lands in
+# a draft release: write the notes, add the Android APK, then publish it. Copies update once it is published.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+concurrency:
+  group: release-${{ github.ref }}
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: ''
+          - os: macos-latest
+            args: --target universal-apple-darwin
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      # The tag must name the version the app is built as, or installed copies would offer it again.
+      - name: Tag matches the app version
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME but tauri.conf.json says $version"; exit 1; }
+      - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Dungeon Books __VERSION__
+          releaseBody: Notes to come.
+          releaseDraft: true
+          prerelease: false
+          args: ${{ matrix.args }}

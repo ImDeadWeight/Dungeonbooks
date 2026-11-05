@@ -1,6 +1,6 @@
 //! Native shell shared by desktop and mobile: registers the plugins (files,
 //! dialogs, HTTP for talking to AI models, one window at a time on desktop),
-//! the AI connection on desktop, and starts the Tauri app that hosts the web UI.
+//! the AI connection and updates on desktop, and starts the Tauri app that hosts the web UI.
 
 #[cfg(desktop)]
 mod image_file;
@@ -33,6 +33,8 @@ pub fn run() {
                     let _ = window.set_focus();
                 }
             }))
+            .plugin(tauri_plugin_updater::Builder::new().build())
+            .plugin(tauri_plugin_process::init())
             .setup(|app| {
                 mcp::setup(app.handle());
                 Ok(())
