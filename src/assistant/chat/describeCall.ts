@@ -29,6 +29,8 @@ export function describeCall(call: ToolCall): string {
       return `Link mentions on ${page}`;
     case 'add_image':
       return `Add an image to ${page}${a.path ? ` from ${str(a.path)}` : a.url ? ` from ${str(a.url)}` : ''}`;
+    case 'draw_image':
+      return a.image ? `Redraw image ${String(a.image)} on ${page}` : `Draw an image on ${page}`;
     case 'view_image':
       return `Look at the image on ${page}`;
     case 'add_pin':

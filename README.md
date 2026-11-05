@@ -62,7 +62,9 @@ notes as they were is kept as `notebook-<campaign id>.before-format-2.json`.
 **Connect AI** (desktop app, top bar) lets AI apps that speak the Model Context Protocol work with the open campaign's
 notes: get an overview, search, read pages as Markdown, create pages, add or replace text, change a page's details and
 link mentions. They can add a picture to a page from a file on this computer (by its full path; only PNG, JPEG,
-WebP and GIF files up to 25 MB, checked by the native side), a web address, or base64. On maps they can look at the picture (with a grid and numbered pins, for models that see images), add,
+WebP and GIF files up to 25 MB, checked by the native side), a web address, or base64, or draw one from SVG they
+write (a map's layout, a diagram), also in place of an image already there, keeping its pins. The SVG is drawn as a
+picture, so nothing in it runs. On maps they can look at the picture (with a grid and numbered pins, for models that see images), add,
 move and remove pins, and set captions. They can also look at the Encounters tab without changing it: list and read
 encounters, search and read creatures (the user's NPCs and the SRD's), and rate a planned fight. They can't delete pages, and each change can be undone (Settings → AI changes, or the notice that shows when one happens). Connections are off until switched on there;
 the dialog gives the setup to paste:

@@ -72,3 +72,23 @@ describe('adding images', () => {
     await expect(toolNamed('add_image')!.prepare!({ page: 'Nowhere', data: png })).rejects.toThrow('No page is called "Nowhere"');
   });
 });
+
+describe('drawing images', () => {
+  it('redraws an image in place, keeping its pins and setting a caption', async () => {
+    await run('add_pin', { page: 'Atlas', x: 0.3, y: 0.6, pin_page: 'Vaultrock' });
+    const newId = `${'c'.repeat(64)}.png`;
+    const text = await toolNamed('draw_image')!.run({ page: 'Atlas', image: 1, svg: '<svg/>', caption: 'Drawn' }, newId);
+    expect(text).toBe('Redrew image 1 on "Atlas"; its pin stays where it was.');
+    expect(image()).toMatchObject({ imageId: newId, caption: 'Drawn', pins: [{ pageId: 'vault', x: 0.3, y: 0.6 }] });
+  });
+
+  it('adds a new drawing below what is there', async () => {
+    expect(await toolNamed('draw_image')!.run({ page: 'Atlas', svg: '<svg/>' }, `${'d'.repeat(64)}.png`)).toBe('Added image 2 to "Atlas".');
+  });
+
+  it('checks the page and image before drawing', async () => {
+    const draw = toolNamed('draw_image')!;
+    await expect(draw.prepare!({ page: 'Nowhere', svg: '<svg viewBox="0 0 1 1"/>' })).rejects.toThrow('No page is called');
+    await expect(draw.prepare!({ page: 'Atlas', image: 3, svg: '<svg viewBox="0 0 1 1"/>' })).rejects.toThrow('from 1 to 1');
+  });
+});
