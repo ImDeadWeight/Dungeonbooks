@@ -90,11 +90,29 @@ formats still come from the [campaign-link](https://github.com/ImDeadWeight/camp
 ```sh
 npm install
 npm run dev        # browser-only UI at http://localhost:1440 (data in localStorage)
-npm test           # domain logic tests
 npm run tauri dev  # desktop app (same one-time Rust setup as Encounters)
 ```
 
 The dev server uses port 1440 (Encounters uses 1420, Lorekeeper 1430), so all three can run at once.
+
+### Tests
+
+```sh
+npm run typecheck  # the app and the end-to-end tests
+npm test           # unit tests (Vitest): domain logic, AI tools, file formats
+npm run test:e2e   # end-to-end tests (Playwright): the browser UI in Chromium; starts `npm run dev` unless it's running
+npm run check      # all three
+cd src-tauri && cargo fmt --check && cargo clippy --all-targets -- -D warnings && cargo test   # the native shell
+```
+
+Before the first `test:e2e`, run `npx playwright install chromium` once. End-to-end tests live in `e2e/`: each opens the
+app on its own data (`e2e/support/app.ts` seeds localStorage) and drives it as a user would; AI tools are called through
+the app's MCP handler, as Claude Desktop does. A failing run keeps a screenshot and a trace in `test-results/`
+(`npx playwright show-trace <trace.zip>`).
+
+GitHub Actions (`.github/workflows/ci.yml`) runs all of these on every pull request and every push to main: typecheck,
+unit tests and build on Linux, the end-to-end tests in Chromium on Linux (the report is uploaded when they fail), and the
+Rust checks on Windows.
 
 **Android** (same one-time setup as Encounters' README describes):
 

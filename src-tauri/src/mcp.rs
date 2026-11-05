@@ -211,7 +211,11 @@ fn handle(app: &AppHandle, mut request: tiny_http::Request, config: &Config) {
         return respond(request, 403, &rpc_error("Wrong host"));
     }
     if header(&request, "Authorization").as_deref() != Some(&format!("Bearer {}", config.token)) {
-        return respond(request, 401, &rpc_error("Missing or wrong token: copy the setup from Dungeon Books' Connect AI dialog"));
+        return respond(
+            request,
+            401,
+            &rpc_error("Missing or wrong token: copy the setup from Dungeon Books' Connect AI dialog"),
+        );
     }
     if request.url().split('?').next() != Some("/mcp") {
         return respond(request, 404, &rpc_error("The endpoint is /mcp"));
@@ -347,11 +351,19 @@ pub fn run_stdio() -> i32 {
         let deadline = Instant::now() + START_TIMEOUT;
         loop {
             let Some(config) = read_config() else {
-                stdio_error(&mut out, &line, "Dungeon Books hasn't been set up for AI connections: open it and use Connect AI.");
+                stdio_error(
+                    &mut out,
+                    &line,
+                    "Dungeon Books hasn't been set up for AI connections: open it and use Connect AI.",
+                );
                 break;
             };
             if !config.enabled {
-                stdio_error(&mut out, &line, "AI connections are switched off in Dungeon Books: switch them on in its Connect AI dialog.");
+                stdio_error(
+                    &mut out,
+                    &line,
+                    "AI connections are switched off in Dungeon Books: switch them on in its Connect AI dialog.",
+                );
                 break;
             }
             match post(&config, &line) {
@@ -377,7 +389,11 @@ pub fn run_stdio() -> i32 {
                         started = true;
                     }
                     if Instant::now() > deadline {
-                        stdio_error(&mut out, &line, "Dungeon Books isn't answering: open it, and check that AI connections are on.");
+                        stdio_error(
+                            &mut out,
+                            &line,
+                            "Dungeon Books isn't answering: open it, and check that AI connections are on.",
+                        );
                         break;
                     }
                     std::thread::sleep(Duration::from_millis(500));

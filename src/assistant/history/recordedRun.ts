@@ -52,7 +52,9 @@ export function undoAiChange(id: string, anyway = false): UndoRefusal | null {
   if (change.undoneAt) return { reason: 'undone' };
   const current = contents();
   const edited = changedSince(current, change);
-  if (edited.length && !anyway) return { reason: 'edited', titles: edited.map((p) => p.title) };
+  // Named as they are now, which may not be how the change left them.
+  const titleNow = (id: string) => current.pages.find((p) => p.id === id)?.title;
+  if (edited.length && !anyway) return { reason: 'edited', titles: edited.map((p) => titleNow(p.id) ?? p.title) };
   useNotebook.setState(undoChange(current, change, newId));
   markUndone(id);
   return null;
