@@ -26,6 +26,7 @@ import { startPersistence as loadLorekeeper } from './lorekeeper/state/persisten
 import { useUi as useLorekeeperUi } from './lorekeeper/state/uiStore';
 import { copyOldApps } from './migration/copyOldApps';
 import { unifyCampaigns } from './migration/unifyCampaigns';
+import { hasMacTitleBar } from './platform';
 import { Shell } from './shell/Shell';
 import './styles/theme.css';
 import './styles/controls.css';
@@ -38,6 +39,9 @@ const markTab = () => {
   document.documentElement.dataset.tab = useTabs.getState().tab;
 };
 markTab();
+
+/** On a Mac the native window buttons sit over the top bar's left end; the bars make room for them (shell.css). */
+if (hasMacTitleBar()) document.documentElement.dataset.platform = 'mac';
 
 /** Problems with campaigns show in the showing tab's notices. */
 setErrorReporter((text) => {

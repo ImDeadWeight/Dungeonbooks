@@ -5,9 +5,14 @@
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Copy, Minus, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { hasMacTitleBar } from '../platform';
 
-/** Minimize / maximize / close for the themed title bar (native frame is hidden). */
+/** Minimize / maximize / close for the themed title bar (native frame is hidden; macOS keeps its own buttons). */
 export function WindowControls() {
+  return hasMacTitleBar() ? null : <WindowButtons />;
+}
+
+function WindowButtons() {
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {

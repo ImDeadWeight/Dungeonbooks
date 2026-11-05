@@ -13,9 +13,23 @@ export function isMobile(): boolean {
   return /Android|iPhone|iPad/i.test(navigator.userAgent);
 }
 
-/** Desktop Tauri draws its own title bar (the native one is hidden). */
+/** Running on a Mac (where the window keeps the native close/minimize/zoom buttons). */
+export function isMac(): boolean {
+  return /Macintosh|Mac OS X/i.test(navigator.userAgent) && !isMobile();
+}
+
+/**
+ * Desktop Tauri draws its own title bar (the native one is hidden). On macOS
+ * the bar still is the title bar, but the native buttons sit over its left end
+ * (tauri.macos.conf.json), so the app draws no window buttons of its own.
+ */
 export function hasCustomTitleBar(): boolean {
   return isTauri() && !isMobile();
+}
+
+/** Desktop Tauri on a Mac: the native window buttons overlay the top bar. */
+export function hasMacTitleBar(): boolean {
+  return hasCustomTitleBar() && isMac();
 }
 
 /** Width (px) below which the app shows one panel at a time (phones); keep in step with phone.css. */

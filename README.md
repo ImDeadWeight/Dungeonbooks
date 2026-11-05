@@ -115,6 +115,18 @@ GitHub Actions (`.github/workflows/ci.yml`) runs all of these on every pull requ
 unit tests and build on Linux, the end-to-end tests in Chromium on Linux (the report is uploaded when they fail), and the
 Rust checks on Windows.
 
+**macOS** (Node.js and Rust from rustup; Xcode or its Command Line Tools):
+
+```sh
+rustup target add aarch64-apple-darwin x86_64-apple-darwin   # once
+npm run tauri build -- --target universal-apple-darwin
+```
+
+The `.dmg` (for Apple silicon and Intel Macs) lands in `src-tauri/target/universal-apple-darwin/release/bundle/dmg/`.
+`src-tauri/tauri.macos.conf.json` keeps the native window buttons over the top bar's left end. The build isn't
+signed, so the first time on another Mac open it with right-click → Open (or System Settings → Privacy & Security →
+Open Anyway). Data is under `~/Library/Application Support/com.dungeonbooks.app/data/`.
+
 **Android** (same one-time setup as Encounters' README describes):
 
 ```sh

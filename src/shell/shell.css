@@ -46,3 +46,9 @@
     padding: 4px 8px;
   }
 }
+
+/* macOS: the native close/minimize/zoom buttons sit over the bar's left end (tauri.macos.conf.json). */
+:root[data-platform='mac'] .top-bar.title-bar {
+  padding-left: 84px;
+  padding-right: 12px;
+}
