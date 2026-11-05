@@ -1,23 +1,173 @@
-# Builds the desktop app for a release when a version tag (v0.3.1, ...) is pushed:
-#   Windows - the setup .exe
-#   macOS   - one universal .dmg (Apple silicon and Intel)
-# Each build's update files are signed with the updater key (the TAURI_SIGNING_PRIVATE_KEY secret), and
-# latest.json, which installed copies read to find a new version, is uploaded with them. Everything lands in
-# a draft release: write the notes, add the Android APK, then publish it. Copies update once it is published.
+# Cuts a release every time CI passes on main, so pushing code is all it takes for installed copies to update:
+#   1. version - picks the version: the next patch (0.3.1 -> 0.3.2), or the version in the code as it is if that one has
+#                no tag yet (a hand bump to 0.4.0 is released as 0.4.0). A bump is committed to main as "Version X.Y.Z";
+#                either way the tag vX.Y.Z is pushed.
+#   2. build   - Windows (the setup .exe) and macOS (one universal .dmg), each checked out AT THE TAG. Each build's
+#                update files are signed with the updater key (the TAURI_SIGNING_PRIVATE_KEY secret) and uploaded,
+#                with latest.json, into a draft release.
+#   3. publish - writes the notes and publishes the draft as the latest release. Installed copies read
+#                releases/latest/download/latest.json, which skips drafts and prereleases, so they see the new version
+#                only here, once both platforms are up.
+#
+# It waits for CI rather than running on the push itself, so a commit that fails its tests never reaches anyone's
+# update notice. Only the commit CI tested is released: if main has moved on since, this run stands down and the CI run
+# for the newer commit releases it. A push that changes nothing but Markdown is not released.
+#
+# The bump commit and tag are pushed with GITHUB_TOKEN, and pushes made with that token don't trigger workflows, so
+# they set off neither CI nor this workflow again.
+#
+# A failed build leaves a tag with a draft release. Recover with "Re-run failed jobs" (which keeps the version job's
+# outputs), never "Re-run all jobs" (which would see the tag and bump again, skipping a number).
 name: Release
 
 on:
-  push:
-    tags: ['v*']
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  # Manual escape hatch: release main as it is, without waiting for CI.
+  workflow_dispatch:
 
+# One release at a time. GitHub keeps only the newest pending run per group, which is the one to keep: it has
+# everything the cancelled ones had.
 concurrency:
-  group: release-${{ github.ref }}
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 env:
   NODE_VERSION: 22
 
 jobs:
+  version:
+    name: Pick the version and tag it
+    # CI also runs on pull requests; only a passing run on a push to main releases.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      release: ${{ steps.result.outputs.release }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Pick the version
+        id: plan
+        env:
+          TESTED: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          stand_down() { echo "::notice::$1"; echo "release=false" >> "$GITHUB_OUTPUT"; exit 0; }
+
+          if [ -n "${TESTED:-}" ] && [ "$(git rev-parse origin/main)" != "$TESTED" ]; then
+            stand_down "main has moved on since CI tested $TESTED; the run for the newer commit releases it"
+          fi
+
+          current=$(node -p "require('./package.json').version")
+          conf=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          cargo=$(sed -n 's/^version = "\(.*\)"$/\1/p' src-tauri/Cargo.toml | head -n 1)
+          if [ "$current" != "$conf" ] || [ "$current" != "$cargo" ]; then
+            echo "::error::package.json says $current, tauri.conf.json $conf, Cargo.toml $cargo; they must match"
+            exit 1
+          fi
+
+          if git rev-parse -q --verify "refs/tags/v$current" >/dev/null; then
+            if [ -z "$(git diff --name-only "v$current" HEAD | grep -v '\.md$' || true)" ]; then
+              stand_down "nothing but Markdown has changed since v$current"
+            fi
+            next=$(node -e '
+              const m = /^(\d+)\.(\d+)\.(\d+)$/.exec(process.argv[1])
+              if (!m) { console.error(`::error::${process.argv[1]} is not X.Y.Z; set the next version by hand`); process.exit(1) }
+              console.log(`${m[1]}.${m[2]}.${Number(m[3]) + 1}`)
+            ' "$current")
+            bump=true
+            echo "Releasing $current -> $next"
+          else
+            next=$current
+            bump=false
+            echo "v$current has no tag yet; releasing it as it is"
+          fi
+          if git ls-remote --exit-code --tags origin "refs/tags/v$next" >/dev/null; then
+            echo "::error::tag v$next already exists on origin"
+            exit 1
+          fi
+          {
+            echo "version=$next"
+            echo "bump=$bump"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Bump the version
+        if: steps.plan.outputs.release != 'false' && steps.plan.outputs.bump == 'true'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+        run: |
+          set -euo pipefail
+          # package.json and package-lock.json
+          npm version "$VERSION" --no-git-tag-version
+          # tauri.conf.json, Cargo.toml and Cargo.lock: only the app's own version line in each
+          node -e '
+            const fs = require("fs")
+            const v = process.argv[1]
+            const edit = (file, re, to) => {
+              const before = fs.readFileSync(file, "utf8")
+              const after = before.replace(re, to)
+              if (after === before) { console.error(`::error::no version to bump in ${file}`); process.exit(1) }
+              fs.writeFileSync(file, after)
+            }
+            edit("src-tauri/tauri.conf.json", /"version": "[^"]+"/, `"version": "${v}"`)
+            edit("src-tauri/Cargo.toml", /^version = "[^"]+"/m, `version = "${v}"`)
+            edit("src-tauri/Cargo.lock", /(name = "dungeon-books"\r?\nversion = ")[^"]+"/, `$1${v}"`)
+          ' "$VERSION"
+          git diff --stat
+          test "$(git diff --name-only | wc -l)" -eq 5 || { echo "::error::expected exactly 5 files to change"; exit 1; }
+
+      - name: Commit, tag and push
+        id: push
+        if: steps.plan.outputs.release != 'false'
+        env:
+          VERSION: ${{ steps.plan.outputs.version }}
+          BUMP: ${{ steps.plan.outputs.bump }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ "$BUMP" = true ]; then
+            git commit -am "Version $VERSION"
+            refs="HEAD:refs/heads/main refs/tags/v$VERSION"
+          else
+            refs="refs/tags/v$VERSION"
+          fi
+          git tag -a "v$VERSION" -m "Dungeon Books $VERSION"
+          # --atomic: main and the tag land together or not at all. A rejection means main moved in the seconds since
+          # the check above, and that newer commit's CI run will release it.
+          if git push --atomic origin $refs; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::main moved while tagging v$VERSION; the run for the newer commit releases it"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Result
+        id: result
+        if: always()
+        run: echo "release=${{ steps.push.outputs.release || 'false' }}" >> "$GITHUB_OUTPUT"
+
   build:
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -34,11 +184,15 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/v${{ needs.version.outputs.version }}
       # The tag must name the version the app is built as, or installed copies would offer it again.
       - name: Tag matches the app version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
         run: |
           version=$(node -p "require('./src-tauri/tauri.conf.json').version")
-          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME but tauri.conf.json says $version"; exit 1; }
+          test "$version" = "$VERSION" || { echo "Tag v$VERSION but tauri.conf.json says $version"; exit 1; }
       - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
       - uses: actions/setup-node@v4
         with:
@@ -57,9 +211,67 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ''
         with:
-          tagName: ${{ github.ref_name }}
+          tagName: v${{ needs.version.outputs.version }}
           releaseName: Dungeon Books __VERSION__
           releaseBody: Notes to come.
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+  publish:
+    name: Publish the release
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/v${{ needs.version.outputs.version }}
+          fetch-depth: 0
+      - name: Write the notes and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          # What changed: every commit since the previous tag, by its subject line. Commits pushed straight to main
+          # have no pull request, so GitHub's generated notes would miss them.
+          changes="## What's changed"$'\n\n'
+          if prev=$(git describe --tags --abbrev=0 "$tag^" 2>/dev/null); then
+            changes+=$(git log --no-merges --format='- %s' "$prev..$tag" | grep -v -E '^- Version [0-9]+\.[0-9]+\.[0-9]+$' || true)
+            changes+=$'\n\n'"**Full changelog**: https://github.com/$REPO/compare/$prev...$tag"
+          else
+            changes+="The first release."
+          fi
+          # Android isn't built here (see the README's Releases section): point at the newest release that has an APK.
+          apk=$(gh api "repos/$REPO/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name | endswith(".apk")))][0].html_url // empty')
+          {
+            echo "$changes"
+            echo
+            echo "## Downloads"
+            echo
+            echo "Installed copies on Windows and macOS offer this update on their own (a notice at the bottom left, or"
+            echo "**Settings → Updates**). To install by hand:"
+            echo
+            echo "- **Windows**: the \`_x64-setup.exe\`."
+            echo "- **macOS**: the universal \`.dmg\` (Apple silicon and Intel, macOS 11 or later). Open it and drag Dungeon"
+            echo "  Books to Applications. It isn't signed yet, so the first time, right-click the app and choose **Open** (or"
+            echo "  System Settings → Privacy & Security → **Open Anyway**)."
+            if [ -n "$apk" ]; then
+              echo "- **Android / ChromeOS**: the APK isn't built with each release; the newest one is on [this release]($apk)."
+            fi
+            echo
+            echo "The other files (\`.app.tar.gz\`, \`.sig\`, \`latest.json\`) are what installed copies download to update."
+            echo
+            echo "## Credits"
+            echo
+            echo "This release includes material from the System Reference Document 5.1 and the System Reference Document 5.2.1"
+            echo "by Wizards of the Coast LLC, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/legalcode)."
+            echo "The creature data was converted from the [5e-bits 5e-database](https://github.com/5e-bits/5e-database) (MIT)."
+            echo "See \`NOTICE.md\` for the full notices."
+          } > notes.md
+          cat notes.md
+          gh release edit "$tag" --repo "$REPO" --notes-file notes.md --draft=false --latest

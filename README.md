@@ -133,17 +133,24 @@ Open Anyway). Data is under `~/Library/Application Support/com.dungeonbooks.app/
 
 ### Releases
 
-Bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`, commit, then push a tag
-for it:
+Push to `main` (directly or by merging a pull request) and a release follows once CI passes; there's nothing to bump or
+tag by hand. `.github/workflows/release.yml`:
 
-```sh
-git tag v0.3.1 && git push origin v0.3.1
-```
+1. bumps the patch version (0.3.1 → 0.3.2) in `package.json`, `package-lock.json`, `src-tauri/tauri.conf.json`,
+   `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock`, commits that to `main` as "Version 0.3.2", and tags it `v0.3.2`.
+   For a bigger step, set the version yourself in those files: a version with no tag yet is released as it is;
+2. builds the Windows setup `.exe` and a universal macOS `.dmg` from the tag, with the signed update files and
+   `latest.json`;
+3. publishes the release, with the commits since the previous one as its notes. Installed copies offer the update from
+   then on (they read `https://github.com/ImDeadWeight/Dungeonbooks/releases/latest/download/latest.json`).
 
-`.github/workflows/release.yml` builds the Windows setup `.exe` and a universal macOS `.dmg` into a **draft** release,
-with the signed update files and `latest.json`. Write the notes, attach the Android APK, and publish it: installed
-copies offer the update once it is published (they read
-`https://github.com/ImDeadWeight/Dungeonbooks/releases/latest/download/latest.json`).
+Only the commit CI tested is released: if more was pushed meanwhile, that push's own CI run releases it. A push that
+changes only Markdown files isn't released. **Actions → Release → Run workflow** releases `main` without waiting for CI.
+Pull after a release, since the bump commit lands on `main`. If a build fails, use **Re-run failed jobs** on that run,
+not **Re-run all jobs**, which would bump the version again.
+
+Not automated yet: the Android APK. Releases don't carry one; their notes link to the newest release that does, so a
+new APK still has to be built (below) and attached to a release by hand.
 
 Updates are signed with the updater key: the public half is in `tauri.conf.json`, the private half is the
 `TAURI_SIGNING_PRIVATE_KEY` repository secret, and a copy is kept at `C:/Users/plcar/.tauri/dungeon-books-updater.key`.
