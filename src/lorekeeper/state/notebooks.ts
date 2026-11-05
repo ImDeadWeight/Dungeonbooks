@@ -1,73 +1,68 @@
 /**
- * @file Exporting a campaign's notes to a file, and importing an exported
- * notebook. Creating, switching, renaming and deleting are the campaign's
- * (see campaigns/lifecycle.ts). Failures show as error notices.
+ * @file A campaign's notes as a whole, for exports and imports: reading any
+ * campaign's notes with their pictures, putting notes in (the open one's go
+ * into the store, others to their file), and importing a notebook exported
+ * by Lorekeeper or Dungeon Books 0.3 and earlier. Creating, switching,
+ * renaming and deleting are the campaign's (see campaigns/lifecycle.ts).
  */
 import { useCampaigns } from '../../campaigns/campaignStore';
 import { createCampaign } from '../../campaigns/lifecycle';
 import { newId, type Id } from '../domain/ids';
 import { fromBase64, toBase64, type ImageData } from '../domain/imageExport';
 import { imageIdsOf } from '../domain/images';
-import { exportFileName, exportText, parseNotebookFile } from '../domain/library';
-import type { Page } from '../domain/notebook';
-import { openFile, saveFileAs } from '../storage/files';
+import { parseNotebookFile } from '../domain/library';
+import { NOTEBOOK_FORMAT, type Notebook } from '../domain/notebook';
 import { imageBytes, putImageBytes } from './imageFiles';
 import { useNotebook } from './notebookStore';
-import { readNotebook, saveOpenNotebook, writeNotebook } from './persistence';
+import { openNotebookContents, readNotebook, saveOpenNotebook, writeNotebook } from './persistence';
 import { useUi } from './uiStore';
 
 const notify = (what: string, err: unknown) => useUi.getState().notifyError(`${what}: ${(err as Error).message}`);
 
-/** The pictures a campaign's pages show, for its export (missing files are left out). */
-async function exportImages(campaignId: Id, pages: Page[]): Promise<ImageData> {
+/** A campaign's notes as saved (the open campaign's as they are now). */
+export async function campaignNotes(campaignId: Id): Promise<Notebook> {
+  return campaignId === useCampaigns.getState().activeId ? openNotebookContents() : readNotebook(campaignId);
+}
+
+/** The pictures a campaign's pages show, as base64 for an export (missing files are left out). */
+export async function exportImages(campaignId: Id, notes: Notebook): Promise<ImageData> {
   const data: ImageData = {};
-  for (const imageId of imageIdsOf(pages)) {
+  for (const imageId of imageIdsOf(notes.pages)) {
     const bytes = await imageBytes(campaignId, imageId);
     if (bytes) data[imageId] = toBase64(bytes);
   }
   return data;
 }
 
-/** Stores an import's pictures with a campaign's notes. */
-async function importImages(campaignId: Id, images: ImageData): Promise<void> {
+/**
+ * Makes `notes` a campaign's notes, its pictures stored first. The open
+ * campaign's notes change in place (and are saved now); any other's file is
+ * written. The notes there before are replaced.
+ */
+export async function putCampaignNotes(campaignId: Id, notes: Notebook, images: ImageData): Promise<void> {
   for (const [imageId, base64] of Object.entries(images)) await putImageBytes(campaignId, imageId, fromBase64(base64));
-}
-
-/** Asks where to save, then writes a campaign's notes as one self-contained file. */
-export async function exportNotebook(id: Id): Promise<void> {
-  try {
-    const { campaigns, activeId } = useCampaigns.getState();
-    const campaign = campaigns.find((c) => c.id === id);
-    if (!campaign) return;
-    const { folders, pages } = useNotebook.getState();
-    const notebook = id === activeId ? { folders, pages } : await readNotebook(id);
-    await saveFileAs(exportFileName(campaign.name), exportText(campaign.name, notebook, await exportImages(id, notebook.pages)));
-  } catch (err) {
-    notify('Could not export the notes', err);
-  }
+  if (campaignId !== useCampaigns.getState().activeId) return writeNotebook(campaignId, { ...notes, format: NOTEBOOK_FORMAT });
+  useNotebook.getState().replaceAll(notes);
+  await saveOpenNotebook();
 }
 
 /**
- * Asks for an exported notebook file. Its notes fill the open campaign when
- * that has none yet (bringing a campaign's notes over after its encounters);
- * otherwise they become a new campaign. Notes are never replaced.
+ * Imports a notebook file (Lorekeeper's, or notes exported by Dungeon Books
+ * 0.3 and earlier). Its notes fill the open campaign when that has none yet
+ * (bringing a campaign's notes over after its encounters); otherwise they
+ * become a new campaign. Notes are never replaced.
  */
-export async function importNotebook(): Promise<void> {
+export async function importNotebook(file: { baseName: string; text: string }): Promise<void> {
   try {
-    const file = await openFile();
-    if (!file) return;
     const { name, notebook, images } = parseNotebookFile(file.text, file.baseName);
     const { folders, pages } = useNotebook.getState();
     if (folders.length === 0 && pages.length === 0) {
-      await importImages(useCampaigns.getState().activeId!, images);
-      useNotebook.getState().replaceAll(notebook);
-      await saveOpenNotebook();
+      await putCampaignNotes(useCampaigns.getState().activeId!, notebook, images);
       return;
     }
     // Notes first, so the campaign list never names a campaign whose notes failed to save.
     const id = newId();
-    await importImages(id, images);
-    await writeNotebook(id, notebook);
+    await putCampaignNotes(id, notebook, images);
     await createCampaign({ id, name });
   } catch (err) {
     notify('Could not import that file', err);

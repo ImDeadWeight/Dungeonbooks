@@ -51,12 +51,13 @@ export function exportArea(state: AppData, areaId: Id): Bundle {
   });
 }
 
-/** A campaign with all its areas and encounters, with dependencies. */
+/** A campaign with all its areas and encounters, and the characters made from its notes' pages, with dependencies. */
 export function exportCampaign(state: AppData, campaignId: Id): Bundle {
   return withDependencies(state, {
     campaigns: state.campaigns.filter((c) => c.id === campaignId),
     areas: state.areas.filter((a) => a.campaignId === campaignId),
     encounters: state.encounters.filter((e) => e.campaignId === campaignId),
+    templateIds: state.templates.filter((t) => t.lore?.notebookId === campaignId).map((t) => t.id),
   });
 }
 

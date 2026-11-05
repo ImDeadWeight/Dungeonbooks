@@ -3,11 +3,12 @@
  * Import, Backup, Characters, Conditions, Connect AI and Settings buttons. On
  * desktop it is also the window title bar.
  */
-import { Download, Upload, Users } from 'lucide-react';
+import { Download, Users } from 'lucide-react';
 import { hasCustomTitleBar } from '../../platform';
-import { exportItems, startImport } from '../state/transferActions';
+import { exportItems } from '../state/transferActions';
 import { useUi } from '../state/uiStore';
 import { AiConnectButton } from '../../shell/AiConnect';
+import { ImportButton } from '../../transfer/ui/ImportButton';
 import { SettingsButton } from '../../shell/Settings';
 import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
@@ -30,9 +31,7 @@ export function TopBar() {
       <TabSwitcher />
       <CampaignMenu />
       <span className="spacer" {...drag} />
-      <button title="Import from a file" onClick={startImport}>
-        <Upload size={16} /> Import
-      </button>
+      <ImportButton />
       <button title="Save a backup of everything" onClick={() => exportItems({ kind: 'everything' })}>
         <Download size={16} /> Backup
       </button>

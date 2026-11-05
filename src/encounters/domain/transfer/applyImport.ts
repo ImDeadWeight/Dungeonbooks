@@ -26,6 +26,23 @@ export interface ImportSummary {
   skipped: number;
 }
 
+/** Options for applyImport. */
+export interface ImportOptions {
+  /**
+   * The file carries its campaigns' notes too (a campaign file): characters
+   * whose page is in an imported campaign follow that campaign when it
+   * becomes a copy. Otherwise they keep pointing at the notes already here.
+   */
+  withNotes?: boolean;
+}
+
+/** An applied import: the merged data, its counts, and the id each item from the file ended up with. */
+export interface AppliedImport {
+  data: AppData;
+  summary: ImportSummary;
+  finalId(type: ItemType, id: Id): Id;
+}
+
 /** What happens to one imported item. */
 type Action = 'add' | 'skip' | 'replace' | 'copy';
 
@@ -44,7 +61,8 @@ export function applyImport(
   plan: ImportPlan,
   resolutions: Record<string, Resolution>,
   placement: Placement,
-): { data: AppData; summary: ImportSummary } {
+  options: ImportOptions = {},
+): AppliedImport {
   const b = file.data;
   const copied = copiedItems(b, plan, resolutions);
   const status = new Map(plan.items.map((i) => [i.key, i.status]));
@@ -103,14 +121,20 @@ export function applyImport(
     conditionMap.set(c.id, match?.id ?? c.id);
   }
 
+  const bundleCampaignIds = new Set(b.campaigns.map((c) => c.id));
+  // lore(): a character's notes page, following its campaign when the notes came along.
+  const lore = (t: CharacterTemplate): Pick<CharacterTemplate, 'lore'> =>
+    t.lore && options.withNotes && bundleCampaignIds.has(t.lore.notebookId)
+      ? { lore: { ...t.lore, notebookId: finalId('campaign', t.lore.notebookId) } }
+      : {};
   const templates = merge<CharacterTemplate>(state.templates, 'character', b.templates, (t) => ({
     ...t,
     tagIds: [...new Set(t.tagIds.map((id) => tagMap.get(id) ?? id))],
+    ...lore(t),
   }));
 
   const campaigns = merge<Campaign>(state.campaigns, 'campaign', b.campaigns, (c) => c);
 
-  const bundleCampaignIds = new Set(b.campaigns.map((c) => c.id));
   const bundleAreaIds = new Set(b.areas.map((a) => a.id));
   // A nested area keeps its parent if that came in the file; the top area of an
   // area export goes directly into the chosen campaign. normalizeAreas() then
@@ -147,5 +171,5 @@ export function applyImport(
     })),
   }));
 
-  return { data: { campaigns, areas, encounters, templates, tags, customConditions }, summary };
+  return { data: { campaigns, areas, encounters, templates, tags, customConditions }, summary, finalId };
 }

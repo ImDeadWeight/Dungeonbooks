@@ -1,29 +1,29 @@
 /**
- * @file Files the user picks: save-as and open dialogs for exporting and
- * importing notebooks. Native dialogs under Tauri; a download and a file
- * picker in a plain browser.
+ * @file Files the user picks for exports and imports: native Save and Open
+ * dialogs under Tauri, a download and a file picker in a plain browser.
  */
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
-import { isTauri } from '../../platform';
+import { isTauri } from '../platform';
 
-/** Only offer JSON files. */
-const FILTERS = [{ name: 'Lorekeeper notebook', extensions: ['json'] }];
+/** Every export is JSON. */
+const FILTERS = [{ name: 'Dungeon Books file', extensions: ['json'] }];
 
 /** A file the user opened. */
 export interface PickedFile {
-  /** File name without folder or extension, e.g. "notebook". */
+  /** File name without folder or extensions, e.g. "Veilstrand" for "Veilstrand.dungeonbooks.json". */
   baseName: string;
   text: string;
 }
 
-/** "C:\maps\veil.json" → "veil". */
+/** "C:\maps\veil.dungeonbooks.json" → "veil". */
 function baseName(path: string): string {
-  return (path.split(/[\\/]/).pop() ?? path).replace(/\.[^.]*$/, '');
+  const name = path.split(/[\\/]/).pop() ?? path;
+  return name.replace(/(\.(dungeonbooks|encounters))?\.json$/i, '') || name;
 }
 
 /** Asks where to save `text`, suggesting `fileName`. Resolves false if the user cancels. */
-export async function saveFileAs(fileName: string, text: string): Promise<boolean> {
+export async function saveFile(fileName: string, text: string): Promise<boolean> {
   if (isTauri()) {
     // The dialog grants the app access to the path the user picks.
     const path = await save({ defaultPath: fileName, filters: FILTERS });
@@ -36,7 +36,7 @@ export async function saveFileAs(fileName: string, text: string): Promise<boolea
   link.href = url;
   link.download = fileName;
   link.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
   return true;
 }
 

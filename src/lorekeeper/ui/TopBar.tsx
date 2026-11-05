@@ -3,10 +3,9 @@
  * Import, Connect AI and Settings buttons. On desktop it is also the window
  * title bar.
  */
-import { Upload } from 'lucide-react';
 import { hasCustomTitleBar } from '../../platform';
-import { importNotebook } from '../state/notebooks';
 import { AiConnectButton } from '../../shell/AiConnect';
+import { ImportButton } from '../../transfer/ui/ImportButton';
 import { SettingsButton } from '../../shell/Settings';
 import { CampaignMenu } from '../../shell/CampaignMenu';
 import { TabSwitcher } from '../../shell/TabSwitcher';
@@ -27,9 +26,7 @@ export function TopBar() {
       <TabSwitcher />
       <CampaignMenu />
       <span className="spacer" {...drag} />
-      <button className="top-bar-import" title="Import notes from an exported notebook (into this campaign if it has none yet, else as a new campaign)" onClick={importNotebook}>
-        <Upload size={16} /> <span className="top-bar-label">Import</span>
-      </button>
+      <ImportButton />
       <AiConnectButton />
       <SettingsButton />
       {customTitleBar && <WindowControls />}

@@ -7,8 +7,9 @@ Encounters and Lorekeeper in one app. Each **campaign** has both: its areas and 
 switch at the start of the top bar moves between the tabs, and each tab stays as you left it.
 
 The campaign menu next to it shows the open campaign; its list switches campaigns, renames one (double-click or the
-pencil), opens a campaign's settings (name, default format, export its encounters or its notes, delete it), and makes
-a new one. Both tabs always show the same campaign. The Encounters tab suggests the notes' Character pages when naming
+pencil), opens a campaign's settings (name, default format, usual party, export, delete), and makes a new one, and
+**Export this campaign…** saves the open campaign as one file (see Campaign files below). Both tabs always show the same
+campaign. The Encounters tab suggests the notes' Character pages when naming
 characters, and the Lorekeeper tab shows the campaign's encounters, their combat state, and characters' stat blocks;
 changes show in the other tab right away. Open in Lorekeeper / Open in Encounters switch tabs and open the page,
 encounter or character (and its campaign, if another one is open).
@@ -138,6 +139,21 @@ The APK lands in `src-tauri/gen/android/app/build/outputs/apk/universal/debug/`.
 
 The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the app's tile colour).
 
+## Campaign files
+
+**Export this campaign…** (the campaign menu) or **Export campaign…** (a campaign's settings) saves the whole campaign
+as one `Name.dungeonbooks.json`: the campaign (name, format, party), its areas and encounters with the characters,
+tags and custom conditions they use, the characters made from its pages, its notes, and their pictures. Links between
+notes and encounters keep working when it is imported, because everything keeps its ids.
+
+**Import** (in every tab's top bar) shows what the file holds against what is here. A campaign that isn't here comes in
+whole and opens. For one that is, its encounters and characters are compared one by one (Keep mine / Use imported /
+Keep both), and its notes go with the choice for the campaign: kept, replaced by the file's, or given to the copy
+(which gets new ids, with the notes' encounter links and the characters' pages following). Import also still takes the
+older files: an Encounters export opens Encounters' own preview, and a Lorekeeper notebook fills the open campaign's
+notes if it has none, or else becomes a new campaign. The Encounters tab's **Backup** saves every campaign's
+encounters and the whole character library (not the notes).
+
 ## Code layout
 
 - `src/campaigns/`: the campaign list and which campaign is open (`campaignStore.ts`), and creating, opening,
@@ -145,6 +161,9 @@ The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the a
 - `src/encounters/`, `src/lorekeeper/`: each app's domain, state, storage and UI, from the separate apps.
 - `src/bridge/`: what the tabs share: each side's catalogue of the campaigns (`catalogs.ts`, the same catalogues the
   apps used to write to the shared folder), and the showing tab plus opening things in the other one (`navigation.ts`).
+- `src/transfer/`: campaign files: the format (`campaignFile.ts`), reading one (`parseCampaignFile.ts`), planning
+  and committing an import (`campaignPlan.ts`, `commitCampaignImport.ts`), Export and Import (`exportCampaign.ts`,
+  `importFile.ts`, which sends older files to their tab's import), and the import previews' shared UI (`ui/`).
 - `src/shell/`: the window: both tabs, the tab switch, the campaign menu and dialog, the Connect AI dialog, window
   controls.
 - `src/assistant/`: what AI apps can do (`notesTools.ts` for the notes; `tools/` for maps, encounters and creatures,
@@ -185,7 +204,8 @@ the one campaign list as above. Characters still point at their pages. The old f
 own copies; changes in one place don't reach the other. The copy happens once (`shared\copied-from-old-apps.json`
 records it) and never over data made here. To copy again, close the app and delete `%APPDATA%\com.dungeonbooks.app`.
 
-On Android, apps can't read each other's files, so bring data over with each tab's Import: an Encounters backup first
-(its campaigns join the list), then, with a campaign open, its exported notebook (the Lorekeeper tab's Import fills the
-open campaign's notes when it has none yet, and otherwise adds the notes as a new campaign). Characters made from the
+On Android, apps can't read each other's files, so bring data over with Import: an Encounters backup first (its
+campaigns join the list), then, with a campaign open, its exported notebook (Import fills the open campaign's notes
+when it has none yet, and otherwise adds the notes as a new campaign). Between Dungeon Books devices, export each
+campaign as a campaign file instead. Characters made from the
 notebook's pages find them again (by page id) on their own.

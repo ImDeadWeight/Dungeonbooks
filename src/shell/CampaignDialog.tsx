@@ -1,6 +1,6 @@
 /**
- * @file A campaign's settings: its name, default format and usual party, exporting its
- * encounters or its notes, and deleting it (after asking).
+ * @file A campaign's settings: its name, default format and usual party,
+ * exporting it as one campaign file, and deleting it (after asking).
  */
 import type { FormatId } from 'campaign-link/formats/formatIds';
 import { Download, Trash2 } from 'lucide-react';
@@ -8,8 +8,7 @@ import { useState } from 'react';
 import { useCampaigns } from '../campaigns/campaignStore';
 import { deleteCampaign, renameCampaign, setCampaignFormat, setCampaignParty } from '../campaigns/lifecycle';
 import type { PartySize } from '../campaigns/types';
-import { exportItems } from '../encounters/state/transferActions';
-import { exportNotebook } from '../lorekeeper/state/notebooks';
+import { exportCampaignFile } from '../transfer/exportCampaign';
 import { Modal } from '../ui/Modal';
 import { CampaignFormatField } from './CampaignFormatField';
 import { CampaignPartyField } from './CampaignPartyField';
@@ -82,11 +81,8 @@ export function CampaignDialog({ id, close }: { id: string; close(): void }) {
         <CampaignFormatField value={formatId} onChange={setFormatId} />
         <CampaignPartyField value={party} onChange={setParty} />
         <div className="campaign-dialog-exports">
-          <button onClick={() => exportItems({ kind: 'campaign', id, name: campaign.name })} title="Its areas and encounters, with the characters in them">
-            <Download size={15} /> Export encounters…
-          </button>
-          <button onClick={() => exportNotebook(id)} title="Its notes, as a Lorekeeper notebook">
-            <Download size={15} /> Export notes…
+          <button onClick={() => exportCampaignFile(id)} title="Its encounters and notes, with their characters and pictures, as one file">
+            <Download size={15} /> Export campaign…
           </button>
         </div>
         <div className="campaign-dialog-danger">

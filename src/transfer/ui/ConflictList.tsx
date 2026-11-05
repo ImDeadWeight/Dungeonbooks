@@ -2,7 +2,7 @@
  * @file Import conflicts: each item that exists with different content gets Keep
  * mine / Use imported / Keep both.
  */
-import type { PlanItem, Resolution } from '../../domain/transfer/plan';
+import type { PlanItem, Resolution } from '../../encounters/domain/transfer/plan';
 import { Select } from 'campaign-link/ui/common/Select';
 
 /** The three resolutions with button labels and tooltips. */

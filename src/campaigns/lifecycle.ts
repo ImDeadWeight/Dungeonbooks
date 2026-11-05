@@ -50,14 +50,15 @@ export async function createCampaign(input: { name: string; formatId?: FormatId 
   return id;
 }
 
-/** Adds campaigns that came in an import, and takes the imported name and format of ones already here. */
+/** Adds campaigns that came in an import, and takes the imported name, format and party of ones already here. */
 export function mergeImportedCampaigns(imported: Campaign[]) {
-  const store = useCampaigns.getState();
-  for (const c of imported) {
-    const mine = store.campaigns.find((x) => x.id === c.id);
-    if (!mine) store.add(c);
-    else if (mine.name !== c.name || mine.formatId !== c.formatId) store.update(c.id, { name: c.name, formatId: c.formatId });
-  }
+  const byId = new Map(imported.map((c) => [c.id, c]));
+  useCampaigns.setState((s) => {
+    const known = new Set(s.campaigns.map((c) => c.id));
+    return {
+      campaigns: [...s.campaigns.map((c) => byId.get(c.id) ?? c), ...imported.filter((c) => !known.has(c.id))],
+    };
+  });
 }
 
 /** Renames a campaign; blank names are ignored. */

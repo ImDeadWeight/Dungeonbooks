@@ -23,17 +23,18 @@ export interface Seed {
   /** Encounters tab: areas and encounters. */
   library?: { areas: object[]; encounters: object[] };
   characters?: object[];
-  /** Campaign settings beyond its id and name. */
-  campaign?: { formatId?: string | null; party?: { size: number; level: number } };
+  /** The campaign (by default "c1", "Veilstrand"). */
+  campaign?: { id?: string; name?: string; formatId?: string | null; party?: { size: number; level: number } };
   tab?: 'encounters' | 'lorekeeper' | 'assistant';
 }
 
-/** Opens the app on exactly this data (campaign "c1", "Veilstrand"). */
+/** Opens the app on exactly this data: one campaign, open. */
 export async function startApp(page: Page, seed: Seed = {}) {
+  const campaign = { id: 'c1', name: 'Veilstrand', formatId: 'dnd5e', ...seed.campaign };
   const data: Record<string, string> = {
-    'dungeon-books:shared:campaigns': doc({ campaigns: [{ id: 'c1', name: 'Veilstrand', formatId: 'dnd5e', ...seed.campaign }], activeId: 'c1' }),
+    'dungeon-books:shared:campaigns': doc({ campaigns: [campaign], activeId: campaign.id }),
     'dungeon-books:shared:view': doc({ tab: seed.tab ?? 'lorekeeper' }),
-    'dungeon-books:lorekeeper:notebook-c1': doc({ format: 2, folders: [], pages: seed.pages ?? [] }),
+    [`dungeon-books:lorekeeper:notebook-${campaign.id}`]: doc({ format: 2, folders: [], pages: seed.pages ?? [] }),
     'dungeon-books:encounters:library': doc(seed.library ?? { areas: [], encounters: [] }),
     'dungeon-books:encounters:characters': doc({ templates: seed.characters ?? [], tags: [] }),
   };

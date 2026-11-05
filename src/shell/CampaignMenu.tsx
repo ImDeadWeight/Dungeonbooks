@@ -1,13 +1,14 @@
 /**
  * @file The campaign menu in both tabs' top bars: the open campaign's name,
  * dropping down the list to switch campaigns, rename one (double-click or
- * pencil) or open its settings, plus New campaign.
+ * pencil) or open its settings, plus New campaign and Export this campaign.
  */
-import { Castle, Check, ChevronDown, Pencil, Plus, Settings2 } from 'lucide-react';
+import { Castle, Check, ChevronDown, Download, Pencil, Plus, Settings2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useActiveCampaign, useCampaigns } from '../campaigns/campaignStore';
 import { createCampaign, renameCampaign, switchCampaign } from '../campaigns/lifecycle';
 import { byName, NEW_CAMPAIGN_NAME, type Campaign } from '../campaigns/types';
+import { exportCampaignFile } from '../transfer/exportCampaign';
 import { CampaignDialog } from './CampaignDialog';
 import './campaignMenu.css';
 
@@ -132,6 +133,17 @@ export function CampaignMenu() {
             >
               <Plus size={15} /> New campaign
             </button>
+            {active && (
+              <button
+                title="Its encounters and notes, with their characters and pictures, as one file"
+                onClick={() => {
+                  close();
+                  exportCampaignFile(active.id);
+                }}
+              >
+                <Download size={15} /> Export this campaign…
+              </button>
+            )}
           </div>
         </div>
       )}

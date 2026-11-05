@@ -1,4 +1,4 @@
-/* @file Import preview: summary table, conflict rows, segmented Keep mine / Use imported / Keep both buttons. */
+/* @file Import previews (Encounters exports and campaign files): summary table, conflict rows, segmented Keep mine / Use imported / Keep both buttons, what happens to the notes. */
 
 .import-preview {
   display: flex;
@@ -73,4 +73,11 @@
 .segmented button.on {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+.import-notes-outcome {
+  padding: 6px 8px;
+  border-left: 3px solid var(--accent);
+  background: var(--panel-raised);
+  border-radius: var(--radius);
 }

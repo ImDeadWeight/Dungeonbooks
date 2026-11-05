@@ -37,13 +37,23 @@ export function parseTransferFile(text: string): ParseResult {
     const schemaVersion = readInt(o.schemaVersion, 'schemaVersion', 1, Number.MAX_SAFE_INTEGER);
     if (schemaVersion > TRANSFER_VERSION) fail('file', 'was made by a newer version of Encounters; update the app to import it');
     const kind = readOneOf(o.kind, 'kind', TRANSFER_KINDS);
-    const data = readBundle(o.data);
-    checkReferences(kind, data);
+    const data = readTransferData(kind, o.data);
     return { ok: true, file: { app: TRANSFER_APP, schemaVersion, kind, exportedAt: readString(o.exportedAt, 'exportedAt', 64), data } };
   } catch (err) {
     if (err instanceof InvalidData) return { ok: false, error: err.message };
     throw err;
   }
+}
+
+/**
+ * Reads and validates a file's data for its kind: every entity, and that its
+ * references resolve. Throws InvalidData. Campaign files (src/transfer/) use
+ * it for the encounters they carry.
+ */
+export function readTransferData(kind: TransferKind, raw: unknown): Bundle {
+  const data = readBundle(raw);
+  checkReferences(kind, data);
+  return data;
 }
 
 /** Reads and validates every collection in the file's data, rejecting duplicate ids. */

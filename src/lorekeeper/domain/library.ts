@@ -1,7 +1,8 @@
 /**
- * @file The exported-notebook file format: writing a campaign's notes as one
- * file (with their pictures, see imageExport.ts), and reading such a file
- * back safely.
+ * @file The exported-notebook file format of Lorekeeper and Dungeon Books
+ * 0.3 and earlier (new exports are campaign files, see src/transfer/): writing
+ * a campaign's notes as one file (with their pictures, see imageExport.ts),
+ * and reading notes back safely, which campaign files use too.
  */
 import { readSharedStatBlock } from 'campaign-link';
 import type { Id } from './ids';
@@ -68,11 +69,16 @@ export function parseNotebookFile(text: string, fallbackName: string): ImportedN
       throw new Error(`it was exported by a newer version of Lorekeeper (format ${parsed.version})`);
     }
     const name = isString(parsed.name) && parsed.name.trim() ? parsed.name.trim() : fallbackName;
-    return { name, notebook: upgradeNotebook(readNotebook(parsed.notebook)), images: readImageData(parsed.images) };
+    return { name, notebook: readNotebookData(parsed.notebook), images: readImageData(parsed.images) };
   }
   // A saved notebook file: { version, data: { folders, pages } }.
-  if (isObject(parsed.data)) return { name: fallbackName, notebook: upgradeNotebook(readNotebook(parsed.data)), images: {} };
+  if (isObject(parsed.data)) return { name: fallbackName, notebook: readNotebookData(parsed.data), images: {} };
   throw new Error('the file is not a Lorekeeper notebook');
+}
+
+/** A notebook read from any file (see readNotebook), upgraded to the current format. Throws an Error saying what's wrong. */
+export function readNotebookData(raw: unknown): Notebook {
+  return upgradeNotebook(readNotebook(raw));
 }
 
 /**

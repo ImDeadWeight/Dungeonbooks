@@ -3,15 +3,16 @@
  * placement, conflicts, then Import.
  */
 import { useMemo, useState } from 'react';
-import { openConflicts, planImport, type ItemStatus, type PlanItem, type Resolution } from '../../domain/transfer/plan';
+import { openConflicts, planImport, type Resolution } from '../../domain/transfer/plan';
 import type { TransferFile, TransferKind } from '../../domain/transfer/types';
 import { activeCampaignId } from '../../../campaigns/campaignStore';
 import { commitImport, currentAppData } from '../../state/transferActions';
 import { useUi } from '../../state/uiStore';
 import { Modal } from '../../../ui/Modal';
 import { ParentPicker } from '../create/ParentPicker';
-import { ConflictList } from './ConflictList';
-import './transfer.css';
+import { ConflictList } from '../../../transfer/ui/ConflictList';
+import { ImportSummary } from '../../../transfer/ui/ImportSummary';
+import '../../../transfer/ui/transfer.css';
 
 /** Dialog title per kind of export file. */
 const KIND_TITLE: Record<TransferKind, string> = {
@@ -21,38 +22,6 @@ const KIND_TITLE: Record<TransferKind, string> = {
   campaign: 'Import campaign',
   everything: 'Restore backup',
 };
-
-/** Row labels for the summary table. */
-const TYPE_PLURAL: Record<PlanItem['type'], string> = {
-  campaign: 'Campaigns',
-  area: 'Areas',
-  encounter: 'Encounters',
-  character: 'Characters',
-};
-
-/** Table of new / already present / different counts per item type. */
-function Summary({ items }: { items: PlanItem[] }) {
-  const types = (Object.keys(TYPE_PLURAL) as PlanItem['type'][]).filter((t) => items.some((i) => i.type === t));
-  // Items of a type with a given status.
-  const count = (t: PlanItem['type'], s: ItemStatus) => items.filter((i) => i.type === t && i.status === s).length;
-  return (
-    <table className="import-summary">
-      <thead>
-        <tr><th /><th>New</th><th>Already present</th><th>Different</th></tr>
-      </thead>
-      <tbody>
-        {types.map((t) => (
-          <tr key={t}>
-            <th>{TYPE_PLURAL[t]}</th>
-            <td>{count(t, 'new')}</td>
-            <td>{count(t, 'identical')}</td>
-            <td>{count(t, 'conflict')}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
 
 /** Preview and options for importing one file; nothing changes until Import. */
 export function ImportPreview({ file }: { file: TransferFile }) {
@@ -85,7 +54,7 @@ export function ImportPreview({ file }: { file: TransferFile }) {
     >
       <div className="import-preview">
         {!Number.isNaN(exported.getTime()) && <p className="muted">Exported {exported.toLocaleString()}</p>}
-        <Summary items={plan.items} />
+        <ImportSummary items={plan.items} />
         {plan.items.length === 0 && <p className="muted">This file only contains tags or conditions.</p>}
 
         {plan.placement !== 'none' && (
