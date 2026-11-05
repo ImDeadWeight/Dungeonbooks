@@ -1,0 +1,82 @@
+# Checks every push to main and every pull request:
+#   web   - typecheck (app and e2e tests), unit tests (Vitest), production build
+#   e2e   - the browser version of the app driven in Chromium (Playwright)
+#   rust  - the native shell: formatting, Clippy, and its tests (on Windows, where the app ships)
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The lockfile names campaign-link by an ssh URL; the repo is public, so fetch it over https.
+      - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 14
+
+  rust:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      # The native shell embeds the built web UI (dist/), so build it first.
+      - run: npm ci && npm run build
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - working-directory: src-tauri
+        run: cargo fmt --check
+      - working-directory: src-tauri
+        run: cargo clippy --all-targets -- -D warnings
+      - working-directory: src-tauri
+        run: cargo test
