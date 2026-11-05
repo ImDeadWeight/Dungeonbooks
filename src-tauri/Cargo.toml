@@ -1,6 +1,6 @@
 [package]
 name = "dungeon-books"
-version = "0.2.0"
+version = "0.3.0"
 description = "Encounters and Lorekeeper in one app: encounter builder, initiative tracker and hyperlinked campaign notes for tabletop RPGs"
 edition = "2021"
 
