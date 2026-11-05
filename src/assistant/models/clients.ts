@@ -103,6 +103,12 @@ async function openAiChat(req: ChatRequest): Promise<ChatReply> {
     stream: true,
     messages: openAiMessages(req.system, req.messages),
     ...(req.tools.length ? { tools: req.tools.map((t) => ({ type: 'function', function: t })) } : {}),
+    // Redstart can trim the tools to those that look relevant to the chat's
+    // opening message, and then keeps that set for the whole chat. Our list is
+    // short and has no way to find a dropped tool again (Redstart's search_tools
+    // isn't in it), so ask for all of them. Only Redstart is sent this field;
+    // other servers may refuse one they don't know.
+    ...(req.connection.kind === 'redstart' && req.tools.length ? { redstart_retrieval: false } : {}),
   };
   const response = await send(`${req.connection.baseUrl}/v1/chat/completions`, req.connection, body, req.signal);
   let text = '';
