@@ -75,10 +75,26 @@ describe('MCP server', () => {
     (await call('create_page', { title: 'Aurelane', type: 'place' }));
     (await call('create_page', { title: 'Fort Talbot', type: 'place' }));
     expect((await call('update_page', { page: 'Fort Talbot', inside_place: 'Aurelane', title: 'Fort Talbot Keep' }))[0]).toBe(
-      '"Fort Talbot": renamed to "Fort Talbot Keep"; now Place inside Aurelane.',
+      '"Fort Talbot": renamed to "Fort Talbot Keep"; now Place inside Aurelane; moved under "Aurelane".',
     );
+    expect(page('Fort Talbot Keep').parentPageId).toBe(page('Aurelane').id);
     expect((await call('read_page', { page: 'Fort Talbt' }))).toEqual(['No page is called "Fort Talbt". Close names: "Fort Talbot Keep".', true]);
     expect((await call('create_page', { title: 'aurelane' }))).toEqual(['A page called "aurelane" already exists.', true]);
     expect((await call('update_page', { page: 'Aurelane', character_kind: 'pc' }))[1]).toBe(true);
+  });
+
+  it('puts a place under the place it is inside, unless told where else', async () => {
+    (await call('create_page', { title: 'Varsilia', type: 'place', folder: 'Places' }));
+    (await call('create_page', { title: 'Freehold', type: 'place', inside_place: 'Varsilia' }));
+    expect(page('Freehold').parentPageId).toBe(page('Varsilia').id);
+    expect((await call('read_page', { page: 'Varsilia' }))[0]).toContain('Pages under it: Freehold');
+
+    (await call('create_page', { title: 'Eastwatch', type: 'place', inside_place: 'Varsilia', folder: 'Beacons' }));
+    expect(page('Eastwatch').parentPageId).toBeFalsy();
+
+    (await call('create_page', { title: 'Saltmarrow', type: 'place' }));
+    expect((await call('update_page', { page: 'Saltmarrow', inside_place: 'Varsilia' }))[0]).toBe('"Saltmarrow": now Place inside Varsilia; moved under "Varsilia".');
+    expect(page('Saltmarrow').parentPageId).toBe(page('Varsilia').id);
+    expect((await call('update_page', { page: 'Saltmarrow', inside_place: 'Varsilia' }))[0]).toBe('"Saltmarrow": now Place inside Varsilia.');
   });
 });

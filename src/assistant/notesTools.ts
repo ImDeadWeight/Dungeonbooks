@@ -139,6 +139,20 @@ function applyType(page: Page, args: Record<string, unknown>) {
   notebook().setPageInfo([page.id], () => info);
 }
 
+/**
+ * The place page a place should sit under in the notes: the one inside_place
+ * names, when no folder or under_page says otherwise. A place inside Varsilia
+ * belongs under Varsilia in the sidebar too, and models set one without the
+ * other. Null when the arguments don't call for it (or name no place page,
+ * which applyType then reports).
+ */
+function insidePlaceParent(args: Record<string, unknown>): Page | null {
+  const { inside_place: inside, folder, under_page: underPage } = args;
+  if (folder !== undefined || underPage !== undefined || typeof inside !== 'string' || !inside.trim()) return null;
+  const parent = findPage(inside);
+  return parent.info?.type === 'place' ? parent : null;
+}
+
 /** Aliases from tool arguments: a list of names. */
 function aliasesArg(value: unknown): string[] | undefined {
   if (value === undefined) return undefined;
@@ -192,7 +206,10 @@ const TEXT_ARG = {
 const TYPE_ARGS = {
   type: { type: 'string', enum: PAGE_TYPE_IDS, description: 'What the page describes.' },
   character_kind: { type: 'string', enum: ['npc', 'pc'], description: 'Character pages: NPC or player character.' },
-  inside_place: { type: 'string', description: 'Place pages: the place page it is inside ("" for none).' },
+  inside_place: {
+    type: 'string',
+    description: 'Place pages: the place page it is inside ("" for none). Unless folder or under_page is given, the page also goes under that place in the notes.',
+  },
   belongs_to: {
     type: 'array',
     items: { type: 'string' },
@@ -310,7 +327,7 @@ export const NOTES_TOOLS: Tool[] = [
       const aliases = aliasesArg(args.aliases);
       const text = args.text === undefined ? null : textArg(args.text);
       if (args.under_page !== undefined && args.folder !== undefined) throw new ToolError('Give a folder or under_page, not both.');
-      const parent = args.under_page === undefined ? null : parentPageArg(null, args.under_page);
+      const parent = args.under_page === undefined ? insidePlaceParent(args) : parentPageArg(null, args.under_page);
       const id = parent ? notebook().addChildPage(parent.id, title) : notebook().addPage(folderAt(args.folder), title);
       applyType(notebook().pages.find((p) => p.id === id)!, args);
       if (aliases) notebook().setPageAliases(id, aliases);
@@ -390,6 +407,11 @@ export const NOTES_TOOLS: Tool[] = [
         applyType(notebook().pages.find((p) => p.id === page.id)!, args);
         const updated = notebook().pages.find((p) => p.id === page.id)!;
         changes.push(`now ${describeType(updated, notebook().pages)}`);
+        const place = insidePlaceParent(args);
+        if (place && updated.parentPageId !== place.id && canNestPage(notebook().pages, page.id, place.id)) {
+          notebook().nestPage(page.id, place.id);
+          changes.push(`moved under "${place.title}"`);
+        }
       }
       if (aliases) {
         notebook().setPageAliases(page.id, aliases);
