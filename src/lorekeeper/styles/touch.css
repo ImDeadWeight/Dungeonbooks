@@ -1,16 +1,22 @@
 /*
- * @file Touch mode: the same screens adapted for fingers (Android, touch
- * laptops without a mouse). Keyed on the input device, not the platform, so
- * a mouse always gets the desktop look. Loaded after the component styles.
+ * @file Touch mode: the same screens adapted for fingers (Android, ChromeOS,
+ * touch laptops). Keyed on the input device, not the platform. Tap-target
+ * sizes follow the main pointer, so a mouse or trackpad keeps the desktop look
+ * (a Chromebook in tablet mode gets the finger sizes). Hover-only controls
+ * also show whenever any touchscreen is present, since a touchscreen laptop's
+ * main pointer can hover but a finger on its screen can't. Loaded after the
+ * component styles.
  */
 
-/* No hover: controls that only appear on hover show for the row last tapped (tapping a row focuses it). */
-@media (hover: none) {
+/* A finger can't hover: controls that only appear on hover show for the row last tapped (tapping a row focuses it). */
+@media (hover: none), (any-pointer: coarse) {
   .tree-row:focus-within .tree-actions {
     visibility: visible;
   }
+}
 
-  /* Boxes need their move/delete bar to be reachable; keep it quiet until touched. */
+/* Touch first: boxes keep their move/delete bar in view, quiet until touched. (With a mouse, focusing a box shows it.) */
+@media (hover: none) {
   .text-box-grip {
     visibility: visible;
     opacity: 0.6;
