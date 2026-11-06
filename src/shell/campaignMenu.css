@@ -140,8 +140,8 @@
   }
 }
 
-/* Touch: row buttons always show (no hover), and rows are finger-sized. */
-@media (hover: none) {
+/* Touch: row buttons always show (a finger can't hover, even on a touchscreen laptop), and rows are finger-sized. */
+@media (hover: none), (any-pointer: coarse) {
   .campaign-row-actions {
     visibility: visible;
   }

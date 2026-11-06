@@ -140,7 +140,7 @@ tag by hand. `.github/workflows/release.yml`:
    `src-tauri/Cargo.toml` and `src-tauri/Cargo.lock`, commits that to `main` as "Version 0.3.2", and tags it `v0.3.2`.
    For a bigger step, set the version yourself in those files: a version with no tag yet is released as it is;
 2. builds the Windows setup `.exe` and a universal macOS `.dmg` from the tag, with the signed update files and
-   `latest.json`;
+   `latest.json`, and a signed Android APK (ARM and x86_64, so it also runs on Intel and AMD Chromebooks);
 3. publishes the release, with the commits since the previous one as its notes. Installed copies offer the update from
    then on (they read `https://github.com/ImDeadWeight/Dungeonbooks/releases/latest/download/latest.json`).
 
@@ -149,8 +149,12 @@ changes only Markdown files isn't released. **Actions → Release → Run workfl
 Pull after a release, since the bump commit lands on `main`. If a build fails, use **Re-run failed jobs** on that run,
 not **Re-run all jobs**, which would bump the version again.
 
-Not automated yet: the Android APK. Releases don't carry one; their notes link to the newest release that does, so a
-new APK still has to be built (below) and attached to a release by hand.
+The APK is signed with the shared campaign-apps key (`C:/Users/plcar/.android-signing/campaign-apps.jks`), the same
+key as every earlier APK: Android only installs an update over an app signed with the same key. CI reads it from three
+repository secrets: `ANDROID_KEYSTORE_BASE64` (the `.jks`, base64-encoded), `ANDROID_KEYSTORE_PASSWORD` (the
+keystore's password, which is also the key's) and `ANDROID_KEY_ALIAS` (`campaign-apps`). Without them the Android job,
+and so the release, fails. The APK's `versionCode` comes from the version (0.3.2 → 3002), so every release installs over
+the one before.
 
 Updates are signed with the updater key: the public half is in `tauri.conf.json`, the private half is the
 `TAURI_SIGNING_PRIVATE_KEY` repository secret, and a copy is kept at `C:/Users/plcar/.tauri/dungeon-books-updater.key`.
@@ -160,27 +164,30 @@ Don't lose it: installed copies only accept updates signed with it. A local `npm
 TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/dungeon-books-updater.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD="" npm run tauri build
 ```
 
-**Android** (same one-time setup as Encounters' README describes):
+**Android and ChromeOS** (same one-time setup as Encounters' README describes):
 
 ```sh
-npm run tauri android init     # once; generates src-tauri/gen/android (not committed)
-npm run tauri android build -- --debug --apk --target aarch64 --target x86_64   # phones + emulator
+npm run tauri android build -- --debug --apk --target aarch64 --target x86_64   # phones, Chromebooks, emulator
 ```
 
-The APK lands in `src-tauri/gen/android/app/build/outputs/apk/universal/debug/`.
+The APK lands in `src-tauri/gen/android/app/build/outputs/apk/universal/debug/`. Leave out `--debug` for a signed
+release APK in `.../apk/universal/release/`; that needs `src-tauri/gen/android/keystore.properties` (git-ignored; see
+`C:/Users/plcar/.android-signing/README.txt`).
 
-`src-tauri/gen/android` is generated and not committed, so after `android init` make the same two edits by hand:
+`src-tauri/gen/android` is committed, so CI builds the same project. Its hand edits, which a fresh `android init`
+would lose:
 
-- `app/src/main/java/com/dungeonbooks/app/MainActivity.kt`: call `enableEdgeToEdge()` before `super.onCreate(...)`
-  (import `androidx.activity.enableEdgeToEdge`). The phone styles keep clear of the status and navigation bars
-  themselves.
-- Release signing: copy the `signingConfigs` block from Lorekeeper's `app/build.gradle.kts` (it reads
-  `../keystore.properties`; see `C:/Users/plcar/.android-signing/README.txt`), set
-  `signingConfig = signingConfigs.getByName("release")` in the release build type, and put `keystore.properties` next
-  to `settings.gradle`. Then `npm run tauri android build -- --apk --target aarch64` gives a signed release APK in
-  `.../apk/universal/release/`.
-- Plain http on the local network (the Assistant's model servers): in `app/build.gradle.kts`'s release build type,
-  add `manifestPlaceholders["usesCleartextTraffic"] = "true"` (debug builds already allow it).
+- `app/src/main/java/com/dungeonbooks/app/MainActivity.kt` calls `enableEdgeToEdge()`; the phone styles keep clear of
+  the status and navigation bars themselves.
+- `app/build.gradle.kts` signs release builds with the key in `../keystore.properties`, and lets release builds use
+  plain http (`usesCleartextTraffic`) for the Assistant's model servers on the local network.
+- `AndroidManifest.xml`, for ChromeOS: a touchscreen isn't required, the window is resizable and opens at 1280×800, and
+  attaching a keyboard or mouse doesn't restart the app.
+
+Input is keyed on the device, not the platform (`src/*/styles/touch.css`): a mouse or trackpad gets the desktop look
+and a finger gets bigger tap targets, so a Chromebook switches as it folds into tablet mode. Controls that only show on
+hover also show for the tapped row whenever a touchscreen is present, so a finger on a touchscreen laptop can reach
+them.
 
 The launcher icon comes from `src-tauri/icons/android` (a vector symbol on the app's tile colour).
 

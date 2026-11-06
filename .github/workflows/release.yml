@@ -5,9 +5,11 @@
 #   2. build   - Windows (the setup .exe) and macOS (one universal .dmg), each checked out AT THE TAG. Each build's
 #                update files are signed with the updater key (the TAURI_SIGNING_PRIVATE_KEY secret) and uploaded,
 #                with latest.json, into a draft release.
-#   3. publish - writes the notes and publishes the draft as the latest release. Installed copies read
-#                releases/latest/download/latest.json, which skips drafts and prereleases, so they see the new version
-#                only here, once both platforms are up.
+#   android    - alongside those, one APK for Android and ChromeOS (ARM and x86_64), signed with the release key (the
+#                ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS secrets).
+#   3. publish - attaches the APK, writes the notes and publishes the draft as the latest release. Installed copies
+#                read releases/latest/download/latest.json, which skips drafts and prereleases, so they see the new
+#                version only here, once every platform is up.
 #
 # It waits for CI rather than running on the push itself, so a commit that fails its tests never reaches anyone's
 # update notice. Only the commit CI tested is released: if main has moved on since, this run stands down and the CI run
@@ -218,9 +220,90 @@ jobs:
           prerelease: false
           args: ${{ matrix.args }}
 
+  android:
+    name: Build the Android APK
+    needs: version
+    if: needs.version.outputs.release == 'true'
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refs/tags/v${{ needs.version.outputs.version }}
+      - name: Tag matches the app version
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          version=$(node -p "require('./src-tauri/tauri.conf.json').version")
+          test "$version" = "$VERSION" || { echo "Tag v$VERSION but tauri.conf.json says $version"; exit 1; }
+      - run: git config --global url."https://github.com/".insteadOf ssh://git@github.com/
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      # The runner image has the Android SDK; this puts its tools on the path and accepts the licences, so Gradle can
+      # fetch the platform the app compiles against.
+      - uses: android-actions/setup-android@v3
+      - name: Install the NDK
+        run: |
+          sdkmanager --install "ndk;$ANDROID_NDK" >/dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK" >> "$GITHUB_ENV"
+        env:
+          ANDROID_NDK: 27.2.12479018
+      # ARM for phones, tablets and most Chromebooks; x86_64 for Intel and AMD Chromebooks (and the emulator).
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: android
+      # The same key as every APK so far (and the other campaign apps): Android only installs an update over the app
+      # when it is signed with the key the installed copy was.
+      - name: Signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
+            echo "::error::set the ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS secrets (see the README's Releases section)"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "password=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+          } > src-tauri/gen/android/keystore.properties
+      - name: Build
+        run: npm run tauri android build -- --apk --target aarch64 --target x86_64
+      - name: Name the APK
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir apk
+          mv src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk \
+            "apk/Dungeon.Books_${VERSION}_universal.apk"
+          rm -f src-tauri/gen/android/keystore.properties "$RUNNER_TEMP/release.jks"
+          ls -l apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: apk/*.apk
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
     name: Publish the release
-    needs: [version, build]
+    needs: [version, build, android]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -229,6 +312,16 @@ jobs:
         with:
           ref: refs/tags/v${{ needs.version.outputs.version }}
           fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          name: apk
+          path: apk
+      - name: Attach the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: gh release upload "v$VERSION" apk/*.apk --repo "$REPO" --clobber
       - name: Write the notes and publish
         env:
           GH_TOKEN: ${{ github.token }}
@@ -246,8 +339,6 @@ jobs:
           else
             changes+="The first release."
           fi
-          # Android isn't built here (see the README's Releases section): point at the newest release that has an APK.
-          apk=$(gh api "repos/$REPO/releases" --jq '[.[] | select(.draft | not) | select(any(.assets[]; .name | endswith(".apk")))][0].html_url // empty')
           {
             echo "$changes"
             echo
@@ -260,9 +351,10 @@ jobs:
             echo "- **macOS**: the universal \`.dmg\` (Apple silicon and Intel, macOS 11 or later). Open it and drag Dungeon"
             echo "  Books to Applications. It isn't signed yet, so the first time, right-click the app and choose **Open** (or"
             echo "  System Settings → Privacy & Security → **Open Anyway**)."
-            if [ -n "$apk" ]; then
-              echo "- **Android / ChromeOS**: the APK isn't built with each release; the newest one is on [this release]($apk)."
-            fi
+            echo "- **Android and ChromeOS**: the \`_universal.apk\` (ARM and x86_64, Android 7 or later). Open it on the"
+            echo "  phone or tablet and allow installing from that app when asked. On a Chromebook, turn on **Settings →"
+            echo "  About ChromeOS → Developers → Linux → Develop Android apps**, then \`adb install\` it from the Linux"
+            echo "  terminal. To update, install the newer APK over the old one; your campaigns stay."
             echo
             echo "The other files (\`.app.tar.gz\`, \`.sig\`, \`latest.json\`) are what installed copies download to update."
             echo
