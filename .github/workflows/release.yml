@@ -246,15 +246,20 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      # The runner image has the Android SDK; this puts its tools on the path and accepts the licences, so Gradle can
-      # fetch the platform the app compiles against.
-      - uses: android-actions/setup-android@v3
-      - name: Install the NDK
-        run: |
-          sdkmanager --install "ndk;$ANDROID_NDK" >/dev/null
-          echo "NDK_HOME=$ANDROID_HOME/ndk/$ANDROID_NDK" >> "$GITHUB_ENV"
+      # The runner image has the Android SDK and its sdkmanager. Accept the licences (so Gradle may fetch build tools),
+      # then install the platform the app compiles against (compileSdk in app/build.gradle.kts) and the NDK the Rust
+      # code links with: the same ones a local build uses.
+      - name: Android SDK packages
         env:
-          ANDROID_NDK: 27.2.12479018
+          PLATFORM: platforms;android-37.0
+          NDK: 29.0.14206865
+        run: |
+          set -euo pipefail
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          (yes || true) | "$sdkmanager" --licenses >/dev/null
+          "$sdkmanager" --install "$PLATFORM" "ndk;$NDK" >/dev/null
+          test -d "$ANDROID_HOME/ndk/$NDK" || { echo "::error::NDK $NDK didn't install"; exit 1; }
+          echo "NDK_HOME=$ANDROID_HOME/ndk/$NDK" >> "$GITHUB_ENV"
       # ARM for phones, tablets and most Chromebooks; x86_64 for Intel and AMD Chromebooks (and the emulator).
       - uses: dtolnay/rust-toolchain@stable
         with:
